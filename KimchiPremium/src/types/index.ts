@@ -42,3 +42,29 @@ export interface Settings {
   alertThreshold: number;  // premium % to trigger alert
   showOnlyCommon: boolean; // only show coins available on all exchanges
 }
+
+export type AlertCondition = 'above' | 'below';
+export type AlertExchange = 'binance' | 'indodax';
+
+export interface PremiumAlert {
+  id: string;
+  symbol: string;          // e.g. "BTC"
+  exchange: AlertExchange; // which exchange premium to watch
+  condition: AlertCondition; // 'above' = 이상, 'below' = 이하
+  threshold: number;       // premium % threshold
+  enabled: boolean;
+  triggered: boolean;      // has it fired?
+  triggeredAt?: Date;
+  createdAt: Date;
+}
+
+export interface AlertLog {
+  id: string;
+  alertId: string;
+  symbol: string;
+  exchange: AlertExchange;
+  condition: AlertCondition;
+  threshold: number;
+  actualPremium: number;
+  triggeredAt: Date;
+}

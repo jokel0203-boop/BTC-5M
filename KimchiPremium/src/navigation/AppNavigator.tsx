@@ -5,7 +5,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
 import { HomeScreen } from '../screens/HomeScreen';
 import { DetailScreen } from '../screens/DetailScreen';
+import { AlertScreen } from '../screens/AlertScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { AlertProvider } from '../hooks/useAlerts';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -35,52 +37,59 @@ function HomeStack() {
   );
 }
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: 10, color: focused ? '#4A90D9' : '#666666' }}>
-      {label}
-    </Text>
-  );
-}
-
 export function AppNavigator() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarStyle: {
-            backgroundColor: '#0A0A0A',
-            borderTopColor: '#2A2A2A',
-          },
-          tabBarActiveTintColor: '#4A90D9',
-          tabBarInactiveTintColor: '#666666',
-          headerShown: false,
-        }}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeStack}
-          options={{
-            tabBarLabel: '김프',
-            tabBarIcon: ({ focused }) => (
-              <Text style={{ fontSize: 22 }}>{focused ? '📊' : '📊'}</Text>
-            ),
+    <AlertProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            tabBarStyle: {
+              backgroundColor: '#0A0A0A',
+              borderTopColor: '#2A2A2A',
+            },
+            tabBarActiveTintColor: '#4A90D9',
+            tabBarInactiveTintColor: '#666666',
+            headerShown: false,
           }}
-        />
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{
-            tabBarLabel: '설정',
-            headerShown: true,
-            headerTitle: '설정',
-            ...screenOptions,
-            tabBarIcon: ({ focused }) => (
-              <Text style={{ fontSize: 22 }}>{focused ? '⚙️' : '⚙️'}</Text>
-            ),
-          }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+        >
+          <Tab.Screen
+            name="Home"
+            component={HomeStack}
+            options={{
+              tabBarLabel: '김프',
+              tabBarIcon: ({ focused }) => (
+                <Text style={{ fontSize: 22 }}>📊</Text>
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Alert"
+            component={AlertScreen}
+            options={{
+              tabBarLabel: '알람',
+              headerShown: true,
+              headerTitle: '김프 알람',
+              ...screenOptions,
+              tabBarIcon: ({ focused }) => (
+                <Text style={{ fontSize: 22 }}>🔔</Text>
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              tabBarLabel: '설정',
+              headerShown: true,
+              headerTitle: '설정',
+              ...screenOptions,
+              tabBarIcon: ({ focused }) => (
+                <Text style={{ fontSize: 22 }}>⚙️</Text>
+              ),
+            }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </AlertProvider>
   );
 }

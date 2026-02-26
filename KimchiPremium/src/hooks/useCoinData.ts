@@ -17,7 +17,7 @@ interface UseCoinDataReturn {
   setSearchQuery: (query: string) => void;
 }
 
-export function useCoinData(refreshInterval: number = 10): UseCoinDataReturn {
+export function useCoinData(refreshInterval: number = 0.1): UseCoinDataReturn {
   const [coins, setCoins] = useState<CoinPrice[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate | null>(null);
   const [loading, setLoading] = useState(true);

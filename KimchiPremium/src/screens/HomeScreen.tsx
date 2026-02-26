@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useCoinData } from '../hooks/useCoinData';
+import { useAlerts } from '../hooks/useAlerts';
 import { CoinRow } from '../components/CoinRow';
 import { SortHeader } from '../components/SortHeader';
 import { SearchBar } from '../components/SearchBar';
@@ -31,7 +32,16 @@ export function HomeScreen({ navigation }: Props) {
     setSortField,
     searchQuery,
     setSearchQuery,
-  } = useCoinData(10);
+  } = useCoinData(0.1);
+
+  const { checkAlerts } = useAlerts();
+
+  // Check alerts whenever coins update
+  useEffect(() => {
+    if (coins.length > 0) {
+      checkAlerts(coins);
+    }
+  }, [coins, checkAlerts]);
 
   const avgBinancePremium = useMemo(() => {
     const withPremium = coins.filter(c => c.binancePremium !== null);
