@@ -1,31 +1,41 @@
 import axios from 'axios';
-import { UpbitTicker } from '../types';
+import { UpbitMarketTicker } from '../types';
 
 const UPBIT_API = 'https://api.upbit.com/v1';
+const TIMEOUT = 10000;
 
-export async function getUpbitMarkets(): Promise<string[]> {
-  const response = await axios.get(`${UPBIT_API}/market/all`);
+export interface UpbitCoinData {
+  price: number;
+  changeRate: number;
+}
+
+async function getUpbitMarkets(): Promise<string[]> {
+  const response = await axios.get(`${UPBIT_API}/market/all`, { timeout: TIMEOUT });
   return response.data
     .filter((m: any) => m.market.startsWith('KRW-'))
     .map((m: any) => m.market);
 }
 
-export async function getUpbitTickers(markets: string[]): Promise<UpbitTicker[]> {
+async function getUpbitTickers(markets: string[]): Promise<UpbitMarketTicker[]> {
   const response = await axios.get(`${UPBIT_API}/ticker`, {
     params: { markets: markets.join(',') },
+    timeout: TIMEOUT,
   });
   return response.data;
 }
 
-export async function getUpbitAllKRW(): Promise<Map<string, number>> {
+export async function getUpbitAllKRW(): Promise<Map<string, UpbitCoinData>> {
   const markets = await getUpbitMarkets();
   const tickers = await getUpbitTickers(markets);
-  const priceMap = new Map<string, number>();
+  const dataMap = new Map<string, UpbitCoinData>();
 
   for (const ticker of tickers) {
     const symbol = ticker.market.replace('KRW-', '');
-    priceMap.set(symbol, ticker.trade_price);
+    dataMap.set(symbol, {
+      price: ticker.trade_price,
+      changeRate: ticker.signed_change_rate,
+    });
   }
 
-  return priceMap;
+  return dataMap;
 }

@@ -8,36 +8,34 @@ interface Props {
   onSort: (field: SortField) => void;
 }
 
-function SortArrow({ field, currentField, order }: { field: SortField; currentField: SortField; order: SortOrder }) {
-  if (field !== currentField) return <Text style={styles.arrowInactive}> ↕</Text>;
-  return <Text style={styles.arrowActive}>{order === 'desc' ? ' ↓' : ' ↑'}</Text>;
+function Arrow({ field, current, order }: { field: SortField; current: SortField; order: SortOrder }) {
+  if (field !== current) return null;
+  return <Text style={styles.arrow}>{order === 'desc' ? ' ▼' : ' ▲'}</Text>;
 }
 
 export function SortHeader({ sortField, sortOrder, onSort }: Props) {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.symbolCol} onPress={() => onSort('symbol')}>
-        <Text style={styles.headerText}>
-          코인
-          <SortArrow field="symbol" currentField={sortField} order={sortOrder} />
+        <Text style={[styles.headerText, sortField === 'symbol' && styles.activeText]}>
+          코인명
+          <Arrow field="symbol" current={sortField} order={sortOrder} />
         </Text>
       </TouchableOpacity>
 
-      <View style={styles.premiumCols}>
-        <TouchableOpacity style={styles.premiumCol} onPress={() => onSort('binancePremium')}>
-          <Text style={styles.headerText}>
-            Binance
-            <SortArrow field="binancePremium" currentField={sortField} order={sortOrder} />
-          </Text>
-        </TouchableOpacity>
+      <TouchableOpacity style={styles.priceCol} onPress={() => onSort('upbitPrice')}>
+        <Text style={[styles.headerText, sortField === 'upbitPrice' && styles.activeText]}>
+          현재가(KRW)
+          <Arrow field="upbitPrice" current={sortField} order={sortOrder} />
+        </Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity style={styles.premiumCol} onPress={() => onSort('indodaxPremium')}>
-          <Text style={styles.headerText}>
-            Indodax
-            <SortArrow field="indodaxPremium" currentField={sortField} order={sortOrder} />
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.premiumCol} onPress={() => onSort('binancePremium')}>
+        <Text style={[styles.headerText, sortField === 'binancePremium' && styles.activeText]}>
+          김프
+          <Arrow field="binancePremium" current={sortField} order={sortOrder} />
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -46,32 +44,34 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    backgroundColor: '#111',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#222',
   },
   symbolCol: {
-    flex: 1,
+    width: 70,
   },
-  premiumCols: {
-    flexDirection: 'row',
-    gap: 16,
+  priceCol: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingRight: 20,
   },
   premiumCol: {
+    width: 80,
     alignItems: 'flex-end',
-    minWidth: 75,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#888888',
+    color: '#666',
   },
-  arrowActive: {
-    color: '#4A90D9',
+  activeText: {
+    color: '#999',
   },
-  arrowInactive: {
-    color: '#444444',
+  arrow: {
+    fontSize: 9,
+    color: '#999',
   },
 });

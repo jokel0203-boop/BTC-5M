@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Alert, Vibration } from 'react-native';
-import { PremiumAlert, AlertLog, AlertCondition, AlertExchange, CoinPrice } from '../types';
+import { PremiumAlert, AlertLog, AlertCondition, CoinPrice } from '../types';
 
 interface AlertContextType {
   alerts: PremiumAlert[];
   alertLogs: AlertLog[];
-  addAlert: (symbol: string, exchange: AlertExchange, condition: AlertCondition, threshold: number) => void;
+  addAlert: (symbol: string, condition: AlertCondition, threshold: number) => void;
   removeAlert: (id: string) => void;
   toggleAlert: (id: string) => void;
   clearLogs: () => void;
@@ -28,15 +28,13 @@ function generateId() {
 export function AlertProvider({ children }: { children: React.ReactNode }) {
   const [alerts, setAlerts] = useState<PremiumAlert[]>([]);
   const [alertLogs, setAlertLogs] = useState<AlertLog[]>([]);
-  // Cooldown: don't re-trigger same alert within 60 seconds
   const cooldownRef = useRef<Map<string, number>>(new Map());
 
   const addAlert = useCallback(
-    (symbol: string, exchange: AlertExchange, condition: AlertCondition, threshold: number) => {
+    (symbol: string, condition: AlertCondition, threshold: number) => {
       const newAlert: PremiumAlert = {
         id: generateId(),
         symbol: symbol.toUpperCase(),
-        exchange,
         condition,
         threshold,
         enabled: true,
@@ -74,15 +72,13 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         const updated = prev.map(alert => {
           if (!alert.enabled) return alert;
 
-          // Cooldown check (60s)
           const lastTrigger = cooldownRef.current.get(alert.id);
           if (lastTrigger && now - lastTrigger < 60_000) return alert;
 
           const coin = coinMap.get(alert.symbol);
           if (!coin) return alert;
 
-          const premium =
-            alert.exchange === 'binance' ? coin.binancePremium : coin.indodaxPremium;
+          const premium = coin.binancePremium;
           if (premium === null) return alert;
 
           const shouldTrigger =
@@ -94,12 +90,10 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
             changed = true;
             cooldownRef.current.set(alert.id, now);
 
-            // Add to log
             const log: AlertLog = {
               id: generateId(),
               alertId: alert.id,
               symbol: alert.symbol,
-              exchange: alert.exchange,
               condition: alert.condition,
               threshold: alert.threshold,
               actualPremium: premium,
@@ -107,13 +101,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
             };
             setAlertLogs(prevLogs => [log, ...prevLogs].slice(0, 100));
 
-            // Vibrate + system alert
             Vibration.vibrate([0, 200, 100, 200]);
             const condStr = alert.condition === 'above' ? '이상' : '이하';
-            const exchStr = alert.exchange === 'binance' ? 'Binance' : 'Indodax';
             Alert.alert(
               `김프 알람 - ${alert.symbol}`,
-              `${exchStr} 프리미엄: ${premium.toFixed(2)}%\n조건: ${alert.threshold}% ${condStr}`,
+              `프리미엄: ${premium.toFixed(2)}%\n조건: ${alert.threshold}% ${condStr}`,
               [{ text: '확인' }]
             );
 

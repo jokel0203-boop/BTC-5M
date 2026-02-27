@@ -1,49 +1,37 @@
 import { CoinPrice, ExchangeRate } from '../types';
+import { UpbitCoinData } from '../api/upbit';
 
-/**
- * Calculate kimchi premium percentage
- * Premium = ((Upbit KRW price - Foreign price in KRW) / Foreign price in KRW) * 100
- */
 export function calculatePremium(
   upbitPriceKrw: number,
-  foreignPrice: number,
-  exchangeRateToKrw: number
+  binancePriceUsdt: number,
+  usdKrw: number
 ): number {
-  const foreignPriceInKrw = foreignPrice * exchangeRateToKrw;
-  if (foreignPriceInKrw === 0) return 0;
-  return ((upbitPriceKrw - foreignPriceInKrw) / foreignPriceInKrw) * 100;
+  const binancePriceKrw = binancePriceUsdt * usdKrw;
+  if (binancePriceKrw === 0) return 0;
+  return ((upbitPriceKrw - binancePriceKrw) / binancePriceKrw) * 100;
 }
 
 export function buildCoinPrices(
-  upbitPrices: Map<string, number>,
+  upbitData: Map<string, UpbitCoinData>,
   binancePrices: Map<string, number>,
-  indodaxPrices: Map<string, number>,
   exchangeRates: ExchangeRate
 ): CoinPrice[] {
   const coins: CoinPrice[] = [];
 
-  for (const [symbol, upbitPrice] of upbitPrices) {
+  for (const [symbol, data] of upbitData) {
     const binancePrice = binancePrices.get(symbol) ?? null;
-    const indodaxPrice = indodaxPrices.get(symbol) ?? null;
 
     const binancePremium =
       binancePrice !== null
-        ? calculatePremium(upbitPrice, binancePrice, exchangeRates.usdKrw)
-        : null;
-
-    const indodaxPremium =
-      indodaxPrice !== null
-        ? calculatePremium(upbitPrice, indodaxPrice, exchangeRates.idrKrw)
+        ? calculatePremium(data.price, binancePrice, exchangeRates.usdKrw)
         : null;
 
     coins.push({
       symbol,
-      name: symbol, // Could map to full names later
-      upbitPrice,
+      upbitPrice: data.price,
       binancePrice,
-      indodaxPrice,
       binancePremium,
-      indodaxPremium,
+      changeRate: data.changeRate,
     });
   }
 
@@ -52,29 +40,15 @@ export function buildCoinPrices(
 
 export function formatKRW(value: number): string {
   if (value >= 1_000_000) {
-    return `₩${(value / 1_000_000).toFixed(1)}M`;
+    return Math.round(value).toLocaleString('ko-KR');
   }
-  if (value >= 1_000) {
-    return `₩${Math.round(value).toLocaleString()}`;
-  }
-  if (value >= 1) {
-    return `₩${value.toFixed(1)}`;
-  }
-  return `₩${value.toFixed(4)}`;
-}
-
-export function formatUSDT(value: number): string {
-  if (value >= 1000) {
-    return `$${Math.round(value).toLocaleString()}`;
+  if (value >= 100) {
+    return Math.round(value).toLocaleString('ko-KR');
   }
   if (value >= 1) {
-    return `$${value.toFixed(2)}`;
+    return value.toFixed(1);
   }
-  return `$${value.toFixed(6)}`;
-}
-
-export function formatIDR(value: number): string {
-  return `Rp${Math.round(value).toLocaleString()}`;
+  return value.toFixed(4);
 }
 
 export function formatPremium(value: number | null): string {
@@ -83,10 +57,23 @@ export function formatPremium(value: number | null): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+export function formatChangeRate(value: number | null): string {
+  if (value === null) return '-';
+  const pct = value * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toFixed(2)}%`;
+}
+
 export function getPremiumColor(value: number | null): string {
   if (value === null) return '#888888';
-  if (value > 3) return '#FF4444';     // High premium - red
-  if (value > 0) return '#FF8800';     // Low premium - orange
-  if (value > -1) return '#888888';    // Near zero - gray
-  return '#44BB44';                    // Discount - green
+  if (value > 0) return '#EF4444';
+  if (value < 0) return '#3B82F6';
+  return '#888888';
+}
+
+export function getChangeColor(value: number | null): string {
+  if (value === null) return '#888888';
+  if (value > 0) return '#EF4444';
+  if (value < 0) return '#3B82F6';
+  return '#888888';
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CoinPrice, ExchangeRate, SortField, SortOrder } from '../types';
-import { getUpbitAllKRW, getBinanceTickers, getIndodaxTickers, getExchangeRates } from '../api';
+import { getUpbitAllKRW, getBinanceTickers, getExchangeRates } from '../api';
 import { buildCoinPrices } from '../utils/premium';
 
 interface UseCoinDataReturn {
@@ -17,7 +17,7 @@ interface UseCoinDataReturn {
   setSearchQuery: (query: string) => void;
 }
 
-export function useCoinData(refreshInterval: number = 0.1): UseCoinDataReturn {
+export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
   const [coins, setCoins] = useState<CoinPrice[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,44 +27,45 @@ export function useCoinData(refreshInterval: number = 0.1): UseCoinDataReturn {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFetchingRef = useRef(false);
 
   const fetchData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       setError(null);
 
-      const [upbitPrices, binancePrices, indodaxPrices, rates] = await Promise.all([
+      const [upbitData, binancePrices, rates] = await Promise.all([
         getUpbitAllKRW(),
         getBinanceTickers(),
-        getIndodaxTickers(),
         getExchangeRates(),
       ]);
 
       setExchangeRates(rates);
-
-      const coinPrices = buildCoinPrices(upbitPrices, binancePrices, indodaxPrices, rates);
+      const coinPrices = buildCoinPrices(upbitData, binancePrices, rates);
       setCoins(coinPrices);
       setLastUpdated(new Date());
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch data');
+      setError(err.message || '데이터를 불러오지 못했습니다');
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    isFetchingRef.current = false;
     await fetchData();
   }, [fetchData]);
 
   useEffect(() => {
     fetchData();
-
     intervalRef.current = setInterval(fetchData, refreshInterval * 1000);
-
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchData, refreshInterval]);
 
@@ -79,7 +80,6 @@ export function useCoinData(refreshInterval: number = 0.1): UseCoinDataReturn {
     });
   }, []);
 
-  // Sort and filter coins
   const processedCoins = coins
     .filter(coin => {
       if (!searchQuery) return true;
@@ -98,13 +98,13 @@ export function useCoinData(refreshInterval: number = 0.1): UseCoinDataReturn {
           aVal = a.binancePremium ?? -Infinity;
           bVal = b.binancePremium ?? -Infinity;
           break;
-        case 'indodaxPremium':
-          aVal = a.indodaxPremium ?? -Infinity;
-          bVal = b.indodaxPremium ?? -Infinity;
-          break;
         case 'upbitPrice':
           aVal = a.upbitPrice ?? 0;
           bVal = b.upbitPrice ?? 0;
+          break;
+        case 'changeRate':
+          aVal = a.changeRate ?? -Infinity;
+          bVal = b.changeRate ?? -Infinity;
           break;
         default:
           return 0;

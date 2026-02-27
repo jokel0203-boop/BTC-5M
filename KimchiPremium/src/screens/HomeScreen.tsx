@@ -32,27 +32,25 @@ export function HomeScreen({ navigation }: Props) {
     setSortField,
     searchQuery,
     setSearchQuery,
-  } = useCoinData(0.1);
+  } = useCoinData(5);
 
   const { checkAlerts } = useAlerts();
 
-  // Check alerts whenever coins update
   useEffect(() => {
     if (coins.length > 0) {
       checkAlerts(coins);
     }
   }, [coins, checkAlerts]);
 
-  const avgBinancePremium = useMemo(() => {
+  const btcPremium = useMemo(() => {
+    const btc = coins.find(c => c.symbol === 'BTC');
+    return btc?.binancePremium ?? null;
+  }, [coins]);
+
+  const avgPremium = useMemo(() => {
     const withPremium = coins.filter(c => c.binancePremium !== null);
     if (withPremium.length === 0) return null;
     return withPremium.reduce((sum, c) => sum + (c.binancePremium ?? 0), 0) / withPremium.length;
-  }, [coins]);
-
-  const avgIndodaxPremium = useMemo(() => {
-    const withPremium = coins.filter(c => c.indodaxPremium !== null);
-    if (withPremium.length === 0) return null;
-    return withPremium.reduce((sum, c) => sum + (c.indodaxPremium ?? 0), 0) / withPremium.length;
   }, [coins]);
 
   const handleCoinPress = (coin: CoinPrice) => {
@@ -66,8 +64,8 @@ export function HomeScreen({ navigation }: Props) {
   if (loading && coins.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4A90D9" />
-        <Text style={styles.loadingText}>데이터 불러오는 중...</Text>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>시세 불러오는 중...</Text>
       </View>
     );
   }
@@ -75,7 +73,7 @@ export function HomeScreen({ navigation }: Props) {
   if (error && coins.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>오류: {error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
         <Text style={styles.retryText} onPress={refresh}>
           탭하여 재시도
         </Text>
@@ -86,8 +84,8 @@ export function HomeScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <PremiumSummary
-        avgBinancePremium={avgBinancePremium}
-        avgIndodaxPremium={avgIndodaxPremium}
+        btcPremium={btcPremium}
+        avgPremium={avgPremium}
         exchangeRates={exchangeRates}
         lastUpdated={lastUpdated}
         coinCount={coins.length}
@@ -102,12 +100,14 @@ export function HomeScreen({ navigation }: Props) {
           <RefreshControl
             refreshing={loading}
             onRefresh={refresh}
-            tintColor="#4A90D9"
-            colors={['#4A90D9']}
+            tintColor="#3B82F6"
+            colors={['#3B82F6']}
           />
         }
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
       />
     </View>
   );
@@ -116,28 +116,29 @@ export function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: '#0D0D0D',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#111111',
+    backgroundColor: '#0D0D0D',
   },
   loadingText: {
-    color: '#888888',
+    color: '#666',
     marginTop: 12,
     fontSize: 14,
   },
   errorText: {
-    color: '#FF4444',
+    color: '#EF4444',
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingHorizontal: 32,
+    textAlign: 'center',
   },
   retryText: {
-    color: '#4A90D9',
+    color: '#3B82F6',
     fontSize: 14,
-    textDecorationLine: 'underline',
   },
   list: {
     flex: 1,

@@ -11,8 +11,8 @@ export function SearchBar({ value, onChangeText }: Props) {
     <View style={styles.container}>
       <TextInput
         style={styles.input}
-        placeholder="코인 검색 (예: BTC, ETH)"
-        placeholderTextColor="#666666"
+        placeholder="코인 검색..."
+        placeholderTextColor="#555"
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="characters"
@@ -25,17 +25,15 @@ export function SearchBar({ value, onChangeText }: Props) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#111111',
+    paddingVertical: 6,
+    backgroundColor: '#0D0D0D',
   },
   input: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
     color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#333333',
   },
 });

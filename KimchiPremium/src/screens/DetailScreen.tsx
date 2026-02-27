@@ -1,134 +1,91 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { CoinPrice, ExchangeRate } from '../types';
-import {
-  formatKRW,
-  formatUSDT,
-  formatIDR,
-  formatPremium,
-  getPremiumColor,
-} from '../utils/premium';
+import { formatKRW, formatPremium, formatChangeRate, getPremiumColor, getChangeColor } from '../utils/premium';
 
 export function DetailScreen({ route }: any) {
   const { coin, exchangeRates } = route.params;
 
-  const binancePriceKrw = coin.binancePrice
+  const binancePriceKrw = coin.binancePrice && exchangeRates
     ? coin.binancePrice * exchangeRates.usdKrw
     : null;
 
-  const indodaxPriceKrw = coin.indodaxPrice
-    ? coin.indodaxPrice * exchangeRates.idrKrw
+  const priceDiff = coin.upbitPrice && binancePriceKrw
+    ? coin.upbitPrice - binancePriceKrw
     : null;
 
   return (
     <ScrollView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.symbol}>{coin.symbol}</Text>
+        <Text style={[styles.premium, { color: getPremiumColor(coin.binancePremium) }]}>
+          {formatPremium(coin.binancePremium)}
+        </Text>
       </View>
 
-      {/* Upbit Price */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>업비트 (KRW)</Text>
-        <View style={styles.priceCard}>
-          <Text style={styles.priceLabel}>현재가</Text>
-          <Text style={styles.priceValue}>
-            {coin.upbitPrice ? formatKRW(coin.upbitPrice) : '-'}
+      {/* Upbit */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>업비트 (Upbit)</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>현재가</Text>
+          <Text style={styles.value}>
+            {coin.upbitPrice ? `${formatKRW(coin.upbitPrice)} KRW` : '-'}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>24시간 변동</Text>
+          <Text style={[styles.value, { color: getChangeColor(coin.changeRate) }]}>
+            {formatChangeRate(coin.changeRate)}
           </Text>
         </View>
       </View>
 
-      {/* Binance Comparison */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>바이낸스 (USDT) 비교</Text>
-        <View style={styles.priceCard}>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>USDT 가격</Text>
-            <Text style={styles.priceValue}>
-              {coin.binancePrice ? formatUSDT(coin.binancePrice) : '-'}
-            </Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>KRW 환산가</Text>
-            <Text style={styles.priceValue}>
-              {binancePriceKrw ? formatKRW(binancePriceKrw) : '-'}
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>김프 (프리미엄)</Text>
-            <Text
-              style={[
-                styles.premiumValue,
-                { color: getPremiumColor(coin.binancePremium) },
-              ]}
-            >
-              {formatPremium(coin.binancePremium)}
-            </Text>
-          </View>
-          {coin.binancePremium !== null && coin.upbitPrice && binancePriceKrw && (
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>가격 차이</Text>
-              <Text style={styles.diffValue}>
-                {formatKRW(coin.upbitPrice - binancePriceKrw)}
-              </Text>
-            </View>
-          )}
+      {/* Binance */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>바이낸스 (Binance)</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>USDT 가격</Text>
+          <Text style={styles.value}>
+            {coin.binancePrice ? `$${coin.binancePrice.toLocaleString('en-US', { maximumFractionDigits: 6 })}` : '-'}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>KRW 환산</Text>
+          <Text style={styles.value}>
+            {binancePriceKrw ? `${formatKRW(binancePriceKrw)} KRW` : '-'}
+          </Text>
         </View>
       </View>
 
-      {/* Indodax Comparison */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>인도닥스 (IDR) 비교</Text>
-        <View style={styles.priceCard}>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>IDR 가격</Text>
-            <Text style={styles.priceValue}>
-              {coin.indodaxPrice ? formatIDR(coin.indodaxPrice) : '-'}
-            </Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>KRW 환산가</Text>
-            <Text style={styles.priceValue}>
-              {indodaxPriceKrw ? formatKRW(indodaxPriceKrw) : '-'}
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>김프 (프리미엄)</Text>
-            <Text
-              style={[
-                styles.premiumValue,
-                { color: getPremiumColor(coin.indodaxPremium) },
-              ]}
-            >
-              {formatPremium(coin.indodaxPremium)}
-            </Text>
-          </View>
-          {coin.indodaxPremium !== null && coin.upbitPrice && indodaxPriceKrw && (
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>가격 차이</Text>
-              <Text style={styles.diffValue}>
-                {formatKRW(coin.upbitPrice - indodaxPriceKrw)}
-              </Text>
-            </View>
-          )}
+      {/* Premium */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>김치프리미엄</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>프리미엄</Text>
+          <Text style={[styles.bigValue, { color: getPremiumColor(coin.binancePremium) }]}>
+            {formatPremium(coin.binancePremium)}
+          </Text>
         </View>
+        {priceDiff !== null && (
+          <View style={styles.row}>
+            <Text style={styles.label}>가격 차이</Text>
+            <Text style={styles.value}>
+              {priceDiff >= 0 ? '+' : ''}{formatKRW(priceDiff)} KRW
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Exchange Rate Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>환율 정보</Text>
-        <View style={styles.priceCard}>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>USD/KRW</Text>
-            <Text style={styles.priceValue}>₩{exchangeRates.usdKrw.toFixed(2)}</Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>IDR/KRW</Text>
-            <Text style={styles.priceValue}>₩{exchangeRates.idrKrw.toFixed(6)}</Text>
+      {/* Exchange Rate */}
+      {exchangeRates && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>환율</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>USD/KRW</Text>
+            <Text style={styles.value}>{exchangeRates.usdKrw.toFixed(2)}</Text>
           </View>
         </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
@@ -136,61 +93,56 @@ export function DetailScreen({ route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: '#0D0D0D',
   },
   header: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#222',
   },
   symbol: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
+    marginBottom: 8,
   },
-  section: {
-    padding: 16,
+  premium: {
+    fontSize: 24,
+    fontWeight: '700',
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#888888',
-    marginBottom: 10,
-  },
-  priceCard: {
-    backgroundColor: '#1A1A1A',
+  card: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: '#141414',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
   },
-  priceRow: {
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
   },
-  priceLabel: {
+  label: {
     fontSize: 14,
-    color: '#999999',
+    color: '#888',
   },
-  priceValue: {
-    fontSize: 16,
+  value: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#FFF',
+    fontVariant: ['tabular-nums'],
   },
-  premiumValue: {
+  bigValue: {
     fontSize: 20,
     fontWeight: '700',
-  },
-  diffValue: {
-    fontSize: 14,
-    color: '#AAAAAA',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#333333',
-    marginVertical: 4,
+    fontVariant: ['tabular-nums'],
   },
 });

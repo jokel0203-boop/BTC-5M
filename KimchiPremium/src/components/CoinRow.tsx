@@ -1,77 +1,85 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CoinPrice } from '../types';
-import { formatKRW, formatPremium, getPremiumColor } from '../utils/premium';
+import { formatKRW, formatPremium, formatChangeRate, getPremiumColor, getChangeColor } from '../utils/premium';
 
 interface Props {
   coin: CoinPrice;
   onPress: (coin: CoinPrice) => void;
 }
 
-export function CoinRow({ coin, onPress }: Props) {
+export const CoinRow = memo(function CoinRow({ coin, onPress }: Props) {
   return (
-    <TouchableOpacity style={styles.container} onPress={() => onPress(coin)}>
-      <View style={styles.symbolContainer}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={() => onPress(coin)}
+      activeOpacity={0.6}
+    >
+      {/* Left: Symbol */}
+      <View style={styles.symbolCol}>
         <Text style={styles.symbol}>{coin.symbol}</Text>
-        <Text style={styles.price}>{coin.upbitPrice ? formatKRW(coin.upbitPrice) : '-'}</Text>
       </View>
 
-      <View style={styles.premiumContainer}>
-        <View style={styles.premiumItem}>
-          <Text style={styles.exchangeLabel}>Binance</Text>
-          <Text style={[styles.premiumValue, { color: getPremiumColor(coin.binancePremium) }]}>
-            {formatPremium(coin.binancePremium)}
-          </Text>
-        </View>
+      {/* Center: Upbit KRW price + 24h change */}
+      <View style={styles.priceCol}>
+        <Text style={styles.price}>
+          {coin.upbitPrice ? formatKRW(coin.upbitPrice) : '-'}
+        </Text>
+        <Text style={[styles.changeRate, { color: getChangeColor(coin.changeRate) }]}>
+          {formatChangeRate(coin.changeRate)}
+        </Text>
+      </View>
 
-        <View style={styles.premiumItem}>
-          <Text style={styles.exchangeLabel}>Indodax</Text>
-          <Text style={[styles.premiumValue, { color: getPremiumColor(coin.indodaxPremium) }]}>
-            {formatPremium(coin.indodaxPremium)}
-          </Text>
-        </View>
+      {/* Right: Premium */}
+      <View style={styles.premiumCol}>
+        <Text style={[styles.premium, { color: getPremiumColor(coin.binancePremium) }]}>
+          {formatPremium(coin.binancePremium)}
+        </Text>
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: '#1A1A1A',
   },
-  symbolContainer: {
-    flex: 1,
+  symbolCol: {
+    width: 70,
   },
   symbol: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#E0E0E0',
+  },
+  priceCol: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingRight: 20,
   },
   price: {
-    fontSize: 12,
-    color: '#AAAAAA',
-    marginTop: 2,
-  },
-  premiumContainer: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  premiumItem: {
-    alignItems: 'flex-end',
-    minWidth: 75,
-  },
-  exchangeLabel: {
-    fontSize: 10,
-    color: '#666666',
-    marginBottom: 2,
-  },
-  premiumValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
+    color: '#FFFFFF',
+    fontVariant: ['tabular-nums'],
+  },
+  changeRate: {
+    fontSize: 11,
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  premiumCol: {
+    width: 80,
+    alignItems: 'flex-end',
+  },
+  premium: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
 });

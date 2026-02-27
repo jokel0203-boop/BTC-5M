@@ -13,9 +13,10 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const screenOptions = {
-  headerStyle: { backgroundColor: '#0A0A0A' },
+  headerStyle: { backgroundColor: '#0D0D0D' },
   headerTintColor: '#FFFFFF',
-  headerTitleStyle: { fontWeight: '600' as const },
+  headerTitleStyle: { fontWeight: '600' as const, fontSize: 16 },
+  headerShadowVisible: false,
 };
 
 function HomeStack() {
@@ -24,13 +25,13 @@ function HomeStack() {
       <Stack.Screen
         name="HomeMain"
         component={HomeScreen}
-        options={{ title: '김치 프리미엄' }}
+        options={{ title: '김치프리미엄' }}
       />
       <Stack.Screen
         name="Detail"
         component={DetailScreen}
         options={({ route }: any) => ({
-          title: `${route.params.coin.symbol} 상세`,
+          title: route.params.coin.symbol,
         })}
       />
     </Stack.Navigator>
@@ -44,11 +45,12 @@ export function AppNavigator() {
         <Tab.Navigator
           screenOptions={{
             tabBarStyle: {
-              backgroundColor: '#0A0A0A',
-              borderTopColor: '#2A2A2A',
+              backgroundColor: '#0D0D0D',
+              borderTopColor: '#1A1A1A',
+              borderTopWidth: 0.5,
             },
-            tabBarActiveTintColor: '#4A90D9',
-            tabBarInactiveTintColor: '#666666',
+            tabBarActiveTintColor: '#3B82F6',
+            tabBarInactiveTintColor: '#555',
             headerShown: false,
           }}
         >
@@ -56,9 +58,9 @@ export function AppNavigator() {
             name="Home"
             component={HomeStack}
             options={{
-              tabBarLabel: '김프',
-              tabBarIcon: ({ focused }) => (
-                <Text style={{ fontSize: 22 }}>📊</Text>
+              tabBarLabel: '시세',
+              tabBarIcon: ({ color }) => (
+                <Text style={{ fontSize: 20, color }}>$</Text>
               ),
             }}
           />
@@ -70,8 +72,8 @@ export function AppNavigator() {
               headerShown: true,
               headerTitle: '김프 알람',
               ...screenOptions,
-              tabBarIcon: ({ focused }) => (
-                <Text style={{ fontSize: 22 }}>🔔</Text>
+              tabBarIcon: ({ color }) => (
+                <Text style={{ fontSize: 18, color }}>!</Text>
               ),
             }}
           />
@@ -83,8 +85,8 @@ export function AppNavigator() {
               headerShown: true,
               headerTitle: '설정',
               ...screenOptions,
-              tabBarIcon: ({ focused }) => (
-                <Text style={{ fontSize: 22 }}>⚙️</Text>
+              tabBarIcon: ({ color }) => (
+                <Text style={{ fontSize: 18, color }}>*</Text>
               ),
             }}
           />
