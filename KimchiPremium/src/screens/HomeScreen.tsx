@@ -137,6 +137,13 @@ export function HomeScreen({ navigation }: Props) {
         </View>
       )}
 
+      {/* Error Banner */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      )}
+
       {/* Search */}
       <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
@@ -279,6 +286,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666',
     fontWeight: '500',
+  },
+
+  // Error Banner
+  errorBanner: {
+    backgroundColor: '#331111',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  errorBannerText: {
+    color: '#EF4444',
+    fontSize: 12,
   },
 
   // List

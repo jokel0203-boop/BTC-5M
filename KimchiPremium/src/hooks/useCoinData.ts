@@ -36,11 +36,29 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
     try {
       setError(null);
 
-      const [upbitData, binancePrices, rates] = await Promise.all([
+      const [upbitResult, binanceResult, ratesResult] = await Promise.allSettled([
         getUpbitAllKRW(),
         getBinanceTickers(),
         getExchangeRates(),
       ]);
+
+      const errors: string[] = [];
+
+      const rates = ratesResult.status === 'fulfilled'
+        ? ratesResult.value
+        : (() => { errors.push('환율'); return { usdKrw: 1380 } as ExchangeRate; })();
+
+      const upbitData = upbitResult.status === 'fulfilled'
+        ? upbitResult.value
+        : (() => { errors.push('업비트'); return new Map(); })();
+
+      const binancePrices = binanceResult.status === 'fulfilled'
+        ? binanceResult.value
+        : (() => { errors.push('바이낸스'); return new Map(); })();
+
+      if (errors.length > 0) {
+        setError(`${errors.join(', ')} API 연결 실패`);
+      }
 
       setExchangeRates(rates);
       const coinPrices = buildCoinPrices(upbitData, binancePrices, rates);
@@ -105,6 +123,10 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
         case 'changeRate':
           aVal = a.changeRate ?? -Infinity;
           bVal = b.changeRate ?? -Infinity;
+          break;
+        case 'tradeVolume24h':
+          aVal = a.tradeVolume24h ?? 0;
+          bVal = b.tradeVolume24h ?? 0;
           break;
         default:
           return 0;
