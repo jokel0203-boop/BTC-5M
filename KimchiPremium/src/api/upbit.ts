@@ -1,8 +1,6 @@
-import axios from 'axios';
 import { UpbitMarketTicker } from '../types';
 
 const UPBIT_API = 'https://api.upbit.com/v1';
-const TIMEOUT = 10000;
 
 export interface UpbitCoinData {
   price: number;
@@ -11,19 +9,28 @@ export interface UpbitCoinData {
   tradeVolume24h: number;
 }
 
+async function fetchJSON(url: string): Promise<any> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function getUpbitMarkets(): Promise<string[]> {
-  const response = await axios.get(`${UPBIT_API}/market/all`, { timeout: TIMEOUT });
-  return response.data
+  const data = await fetchJSON(`${UPBIT_API}/market/all`);
+  return data
     .filter((m: any) => m.market.startsWith('KRW-'))
     .map((m: any) => m.market);
 }
 
 async function getUpbitTickers(markets: string[]): Promise<UpbitMarketTicker[]> {
-  const response = await axios.get(`${UPBIT_API}/ticker`, {
-    params: { markets: markets.join(',') },
-    timeout: TIMEOUT,
-  });
-  return response.data;
+  const query = markets.join(',');
+  return await fetchJSON(`${UPBIT_API}/ticker?markets=${encodeURIComponent(query)}`);
 }
 
 export async function getUpbitAllKRW(): Promise<Map<string, UpbitCoinData>> {
@@ -36,7 +43,7 @@ export async function getUpbitAllKRW(): Promise<Map<string, UpbitCoinData>> {
     dataMap.set(symbol, {
       price: ticker.trade_price,
       changeRate: ticker.signed_change_rate,
-      changePrice: ticker.signed_change_price,
+      changePrice: ticker.signed_change_price ?? 0,
       tradeVolume24h: ticker.acc_trade_price_24h,
     });
   }

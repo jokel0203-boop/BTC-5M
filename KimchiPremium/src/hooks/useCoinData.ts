@@ -34,8 +34,6 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
     isFetchingRef.current = true;
 
     try {
-      setError(null);
-
       const [upbitResult, binanceResult, ratesResult] = await Promise.allSettled([
         getUpbitAllKRW(),
         getBinanceTickers(),
@@ -44,29 +42,41 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
 
       const errors: string[] = [];
 
+      if (ratesResult.status === 'rejected') {
+        errors.push(`환율: ${ratesResult.reason?.message || '실패'}`);
+      }
+      if (upbitResult.status === 'rejected') {
+        errors.push(`업비트: ${upbitResult.reason?.message || '실패'}`);
+      }
+      if (binanceResult.status === 'rejected') {
+        errors.push(`바이낸스: ${binanceResult.reason?.message || '실패'}`);
+      }
+
       const rates = ratesResult.status === 'fulfilled'
         ? ratesResult.value
-        : (() => { errors.push('환율'); return { usdKrw: 1380 } as ExchangeRate; })();
+        : { usdKrw: 1380 } as ExchangeRate;
 
       const upbitData = upbitResult.status === 'fulfilled'
         ? upbitResult.value
-        : (() => { errors.push('업비트'); return new Map(); })();
+        : new Map();
 
       const binancePrices = binanceResult.status === 'fulfilled'
         ? binanceResult.value
-        : (() => { errors.push('바이낸스'); return new Map(); })();
-
-      if (errors.length > 0) {
-        setError(`${errors.join(', ')} API 연결 실패`);
-      }
+        : new Map();
 
       setExchangeRates(rates);
       const coinPrices = buildCoinPrices(upbitData, binancePrices, rates);
       setCoins(coinPrices);
       setLastUpdated(new Date());
+
+      // Only set error if there are failures, never clear previous error on retry start
+      if (errors.length > 0) {
+        setError(errors.join(' | '));
+      } else {
+        setError(null);
+      }
     } catch (err: any) {
-      setError(err.message || '데이터를 불러오지 못했습니다');
-      console.error('Fetch error:', err);
+      setError(err.message || '알 수 없는 에러');
     } finally {
       setLoading(false);
       isFetchingRef.current = false;

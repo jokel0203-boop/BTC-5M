@@ -137,10 +137,15 @@ export function HomeScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* Error Banner */}
-      {error && (
+      {/* Status Banner */}
+      {error ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      ) : null}
+      {!loading && coins.length === 0 && !error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>데이터 없음 - 당겨서 새로고침</Text>
         </View>
       )}
 
