@@ -4,6 +4,8 @@ export interface CoinPrice {
   binancePrice: number | null;
   binancePremium: number | null;
   changeRate: number | null;
+  changePrice: number | null;
+  tradeVolume24h: number | null;
 }
 
 export interface ExchangeRate {
@@ -14,6 +16,7 @@ export interface UpbitMarketTicker {
   market: string;
   trade_price: number;
   signed_change_rate: number;
+  signed_change_price: number;
   acc_trade_price_24h: number;
 }
 
@@ -22,7 +25,7 @@ export interface BinanceTicker {
   price: string;
 }
 
-export type SortField = 'symbol' | 'binancePremium' | 'upbitPrice' | 'changeRate';
+export type SortField = 'symbol' | 'binancePremium' | 'upbitPrice' | 'changeRate' | 'tradeVolume24h';
 export type SortOrder = 'asc' | 'desc';
 
 export type AlertCondition = 'above' | 'below';

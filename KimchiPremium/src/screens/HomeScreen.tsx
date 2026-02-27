@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -6,20 +6,24 @@ import {
   ActivityIndicator,
   Text,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useCoinData } from '../hooks/useCoinData';
 import { useAlerts } from '../hooks/useAlerts';
-import { CoinRow } from '../components/CoinRow';
-import { SortHeader } from '../components/SortHeader';
+import { ExchangeRow } from '../components/ExchangeRow';
+import { PremiumRow } from '../components/PremiumRow';
 import { SearchBar } from '../components/SearchBar';
-import { PremiumSummary } from '../components/PremiumSummary';
 import { CoinPrice } from '../types';
+
+type TabType = 'exchange' | 'premium';
 
 interface Props {
   navigation: any;
 }
 
 export function HomeScreen({ navigation }: Props) {
+  const [activeTab, setActiveTab] = useState<TabType>('exchange');
+
   const {
     coins,
     exchangeRates,
@@ -42,24 +46,22 @@ export function HomeScreen({ navigation }: Props) {
     }
   }, [coins, checkAlerts]);
 
-  const btcPremium = useMemo(() => {
-    const btc = coins.find(c => c.symbol === 'BTC');
-    return btc?.binancePremium ?? null;
-  }, [coins]);
-
-  const avgPremium = useMemo(() => {
-    const withPremium = coins.filter(c => c.binancePremium !== null);
-    if (withPremium.length === 0) return null;
-    return withPremium.reduce((sum, c) => sum + (c.binancePremium ?? 0), 0) / withPremium.length;
-  }, [coins]);
-
-  const handleCoinPress = (coin: CoinPrice) => {
+  const handleCoinPress = useCallback((coin: CoinPrice) => {
     navigation.navigate('Detail', { coin, exchangeRates });
-  };
+  }, [navigation, exchangeRates]);
 
-  const renderItem = ({ item }: { item: CoinPrice }) => (
-    <CoinRow coin={item} onPress={handleCoinPress} />
-  );
+  const renderExchangeItem = useCallback(({ item }: { item: CoinPrice }) => (
+    <ExchangeRow coin={item} onPress={handleCoinPress} />
+  ), [handleCoinPress]);
+
+  const renderPremiumItem = useCallback(({ item }: { item: CoinPrice }) => (
+    <PremiumRow coin={item} exchangeRates={exchangeRates} onPress={handleCoinPress} />
+  ), [handleCoinPress, exchangeRates]);
+
+  // For premium tab, only show coins that have binance price
+  const premiumCoins = useMemo(() => {
+    return coins.filter(c => c.binancePrice !== null);
+  }, [coins]);
 
   if (loading && coins.length === 0) {
     return (
@@ -83,32 +85,99 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <PremiumSummary
-        btcPremium={btcPremium}
-        avgPremium={avgPremium}
-        exchangeRates={exchangeRates}
-        lastUpdated={lastUpdated}
-        coinCount={coins.length}
-      />
+      {/* Top Tabs - CoinNow style */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'exchange' && styles.tabActive]}
+          onPress={() => setActiveTab('exchange')}
+        >
+          <Text style={[styles.tabText, activeTab === 'exchange' && styles.tabTextActive]}>
+            거래소
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'premium' && styles.tabActive]}
+          onPress={() => setActiveTab('premium')}
+        >
+          <Text style={[styles.tabText, activeTab === 'premium' && styles.tabTextActive]}>
+            프리미엄
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Exchange Rate Info Bar - shown on premium tab */}
+      {activeTab === 'premium' && (
+        <View style={styles.rateBar}>
+          <Text style={styles.rateText}>
+            USD/KRW : {exchangeRates ? exchangeRates.usdKrw.toFixed(2) : '-'}
+          </Text>
+          <Text style={styles.rateSep}>  </Text>
+          <Text style={styles.rateText}>USDT/USD : 1.0</Text>
+        </View>
+      )}
+
+      {/* Sort Header */}
+      {activeTab === 'exchange' ? (
+        <View style={styles.sortHeader}>
+          <TouchableOpacity style={styles.sortLeft} onPress={() => setSortField('symbol')}>
+            <Text style={styles.sortText}>설정순</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.sortCenter} onPress={() => setSortField('tradeVolume24h')}>
+            <Text style={styles.sortText}>거래금액</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.sortRight} onPress={() => setSortField('changeRate')}>
+            <Text style={styles.sortText}>등락률</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.sortHeader}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setSortField('symbol')}>
+            <Text style={styles.sortText}>설정순</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Search */}
       <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-      <SortHeader sortField={sortField} sortOrder={sortOrder} onSort={setSortField} />
-      <FlatList
-        data={coins}
-        keyExtractor={item => item.symbol}
-        renderItem={renderItem}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={refresh}
-            tintColor="#3B82F6"
-            colors={['#3B82F6']}
-          />
-        }
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        initialNumToRender={20}
-        maxToRenderPerBatch={20}
-      />
+
+      {/* Coin List */}
+      {activeTab === 'exchange' ? (
+        <FlatList
+          data={coins}
+          keyExtractor={item => item.symbol}
+          renderItem={renderExchangeItem}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refresh}
+              tintColor="#3B82F6"
+              colors={['#3B82F6']}
+            />
+          }
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+        />
+      ) : (
+        <FlatList
+          data={premiumCoins}
+          keyExtractor={item => item.symbol}
+          renderItem={renderPremiumItem}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refresh}
+              tintColor="#3B82F6"
+              colors={['#3B82F6']}
+            />
+          }
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+        />
+      )}
     </View>
   );
 }
@@ -140,6 +209,79 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     fontSize: 14,
   },
+
+  // Top Tabs
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#0D0D0D',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#222',
+  },
+  tab: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#FFFFFF',
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  // Exchange Rate Bar
+  rateBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#111',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1C1C1C',
+  },
+  rateText: {
+    fontSize: 11,
+    color: '#999',
+    fontVariant: ['tabular-nums'],
+  },
+  rateSep: {
+    fontSize: 11,
+    color: '#333',
+  },
+
+  // Sort Header
+  sortHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#111',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#1C1C1C',
+  },
+  sortLeft: {
+    flex: 1,
+  },
+  sortCenter: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  sortRight: {
+    width: 90,
+    alignItems: 'flex-end',
+  },
+  sortText: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
+  },
+
+  // List
   list: {
     flex: 1,
   },

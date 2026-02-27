@@ -32,6 +32,8 @@ export function buildCoinPrices(
       binancePrice,
       binancePremium,
       changeRate: data.changeRate,
+      changePrice: data.changePrice,
+      tradeVolume24h: data.tradeVolume24h,
     });
   }
 
@@ -39,29 +41,46 @@ export function buildCoinPrices(
 }
 
 export function formatKRW(value: number): string {
-  if (value >= 1_000_000) {
-    return Math.round(value).toLocaleString('ko-KR');
-  }
-  if (value >= 100) {
-    return Math.round(value).toLocaleString('ko-KR');
-  }
+  return Math.round(value).toLocaleString('ko-KR');
+}
+
+export function formatUSDT(value: number): string {
   if (value >= 1) {
-    return value.toFixed(1);
+    return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
   }
-  return value.toFixed(4);
+  return value.toFixed(6);
+}
+
+export function formatVolume(value: number): string {
+  if (value >= 1_0000_0000_0000) {
+    return `${Math.round(value / 1_0000_0000_0000).toLocaleString()} 조원`;
+  }
+  if (value >= 1_0000_0000) {
+    return `${Math.round(value / 1_0000_0000).toLocaleString()} 억원`;
+  }
+  if (value >= 1_0000) {
+    return `${Math.round(value / 1_0000).toLocaleString()} 만원`;
+  }
+  return `${Math.round(value).toLocaleString()} 원`;
 }
 
 export function formatPremium(value: number | null): string {
   if (value === null) return '-';
-  const sign = value >= 0 ? '+' : '';
-  return `${sign}${value.toFixed(2)}%`;
+  const sign = value >= 0 ? '+ ' : '- ';
+  return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
 
 export function formatChangeRate(value: number | null): string {
   if (value === null) return '-';
   const pct = value * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(2)}%`;
+  const arrow = pct > 0 ? '▲ ' : pct < 0 ? '▼ ' : '';
+  return `${arrow}${Math.abs(pct).toFixed(2)}%`;
+}
+
+export function formatChangePrice(value: number | null): string {
+  if (value === null) return '-';
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${Math.round(value).toLocaleString('ko-KR')}`;
 }
 
 export function getPremiumColor(value: number | null): string {

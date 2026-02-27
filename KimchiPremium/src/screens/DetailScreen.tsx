@@ -1,6 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { formatKRW, formatPremium, formatChangeRate, getPremiumColor, getChangeColor } from '../utils/premium';
+import {
+  formatKRW,
+  formatUSDT,
+  formatPremium,
+  formatChangeRate,
+  formatChangePrice,
+  formatVolume,
+  getPremiumColor,
+  getChangeColor,
+} from '../utils/premium';
 
 export function DetailScreen({ route }: any) {
   const { coin, exchangeRates } = route.params;
@@ -35,7 +44,13 @@ export function DetailScreen({ route }: any) {
         <View style={styles.row}>
           <Text style={styles.label}>24시간 변동</Text>
           <Text style={[styles.value, { color: getChangeColor(coin.changeRate) }]}>
-            {formatChangeRate(coin.changeRate)}
+            {formatChangeRate(coin.changeRate)}  {formatChangePrice(coin.changePrice)}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>거래대금</Text>
+          <Text style={styles.value}>
+            {coin.tradeVolume24h ? formatVolume(coin.tradeVolume24h) : '-'}
           </Text>
         </View>
       </View>
@@ -46,7 +61,7 @@ export function DetailScreen({ route }: any) {
         <View style={styles.row}>
           <Text style={styles.label}>USDT 가격</Text>
           <Text style={styles.value}>
-            {coin.binancePrice ? `$${coin.binancePrice.toLocaleString('en-US', { maximumFractionDigits: 6 })}` : '-'}
+            {coin.binancePrice ? `${formatUSDT(coin.binancePrice)} USDT` : '-'}
           </Text>
         </View>
         <View style={styles.row}>

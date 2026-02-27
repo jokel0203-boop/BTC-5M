@@ -7,6 +7,8 @@ const TIMEOUT = 10000;
 export interface UpbitCoinData {
   price: number;
   changeRate: number;
+  changePrice: number;
+  tradeVolume24h: number;
 }
 
 async function getUpbitMarkets(): Promise<string[]> {
@@ -34,6 +36,8 @@ export async function getUpbitAllKRW(): Promise<Map<string, UpbitCoinData>> {
     dataMap.set(symbol, {
       price: ticker.trade_price,
       changeRate: ticker.signed_change_rate,
+      changePrice: ticker.signed_change_price,
+      tradeVolume24h: ticker.acc_trade_price_24h,
     });
   }
 

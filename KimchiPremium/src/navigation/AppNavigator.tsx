@@ -49,7 +49,7 @@ export function AppNavigator() {
               borderTopColor: '#1A1A1A',
               borderTopWidth: 0.5,
             },
-            tabBarActiveTintColor: '#3B82F6',
+            tabBarActiveTintColor: '#FFFFFF',
             tabBarInactiveTintColor: '#555',
             headerShown: false,
           }}
@@ -60,7 +60,7 @@ export function AppNavigator() {
             options={{
               tabBarLabel: '시세',
               tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 20, color }}>$</Text>
+                <Text style={{ fontSize: 18, color }}>$</Text>
               ),
             }}
           />
@@ -68,12 +68,12 @@ export function AppNavigator() {
             name="Alert"
             component={AlertScreen}
             options={{
-              tabBarLabel: '알람',
+              tabBarLabel: '알림',
               headerShown: true,
               headerTitle: '김프 알람',
               ...screenOptions,
               tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 18, color }}>!</Text>
+                <Text style={{ fontSize: 16, color }}>!</Text>
               ),
             }}
           />
@@ -86,7 +86,7 @@ export function AppNavigator() {
               headerTitle: '설정',
               ...screenOptions,
               tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 18, color }}>*</Text>
+                <Text style={{ fontSize: 16, color }}>*</Text>
               ),
             }}
           />
