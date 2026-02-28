@@ -12,7 +12,7 @@ const http = require('http');
 const https = require('https');
 
 const PORT = 3001;
-const REFRESH_INTERVAL = 5000; // 5초
+const REFRESH_INTERVAL = 1500; // 1.5초
 
 // --- 캐시 ---
 let cache = {
