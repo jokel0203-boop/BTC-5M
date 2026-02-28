@@ -13,7 +13,7 @@ import { useAlerts } from '../hooks/useAlerts';
 import { ExchangeRow } from '../components/ExchangeRow';
 import { PremiumRow } from '../components/PremiumRow';
 import { SearchBar } from '../components/SearchBar';
-import { CoinPrice } from '../types';
+import { CoinPrice, SortField } from '../types';
 
 type TabType = 'exchange' | 'premium';
 
@@ -63,6 +63,11 @@ export function HomeScreen({ navigation }: Props) {
     return coins.filter(c => c.binancePrice !== null);
   }, [coins]);
 
+  const getSortArrow = (field: SortField) => {
+    if (sortField !== field) return '';
+    return sortOrder === 'desc' ? ' ▼' : ' ▲';
+  };
+
   if (loading && coins.length === 0) {
     return (
       <View style={styles.centerContainer}>
@@ -85,7 +90,7 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Top Tabs - CoinNow style */}
+      {/* Top Tabs */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'exchange' && styles.tabActive]}
@@ -119,20 +124,41 @@ export function HomeScreen({ navigation }: Props) {
       {/* Sort Header */}
       {activeTab === 'exchange' ? (
         <View style={styles.sortHeader}>
-          <TouchableOpacity style={styles.sortLeft} onPress={() => setSortField('symbol')}>
-            <Text style={styles.sortText}>설정순</Text>
+          <TouchableOpacity style={styles.sortBtn} onPress={() => setSortField('symbol')}>
+            <Text style={[styles.sortText, sortField === 'symbol' && styles.sortTextActive]}>
+              이름{getSortArrow('symbol')}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sortCenter} onPress={() => setSortField('tradeVolume24h')}>
-            <Text style={styles.sortText}>거래금액</Text>
+          <TouchableOpacity style={styles.sortBtn} onPress={() => setSortField('upbitPrice')}>
+            <Text style={[styles.sortText, sortField === 'upbitPrice' && styles.sortTextActive]}>
+              가격{getSortArrow('upbitPrice')}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.sortRight} onPress={() => setSortField('changeRate')}>
-            <Text style={styles.sortText}>등락률</Text>
+          <TouchableOpacity style={styles.sortBtn} onPress={() => setSortField('tradeVolume24h')}>
+            <Text style={[styles.sortText, sortField === 'tradeVolume24h' && styles.sortTextActive]}>
+              거래량{getSortArrow('tradeVolume24h')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.sortBtnRight} onPress={() => setSortField('changeRate')}>
+            <Text style={[styles.sortText, sortField === 'changeRate' && styles.sortTextActive]}>
+              등락률{getSortArrow('changeRate')}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.sortHeader}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => setSortField('symbol')}>
-            <Text style={styles.sortText}>설정순</Text>
+          <TouchableOpacity style={styles.sortBtn} onPress={() => setSortField('symbol')}>
+            <Text style={[styles.sortText, sortField === 'symbol' && styles.sortTextActive]}>
+              이름{getSortArrow('symbol')}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.sortBtn}>
+            <Text style={styles.sortText}>바이낸스</Text>
+          </View>
+          <TouchableOpacity style={styles.sortBtnRight} onPress={() => setSortField('binancePremium')}>
+            <Text style={[styles.sortText, sortField === 'binancePremium' && styles.sortTextActive]}>
+              프리미엄{getSortArrow('binancePremium')}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -176,6 +202,19 @@ export function HomeScreen({ navigation }: Props) {
           data={premiumCoins}
           keyExtractor={item => item.symbol}
           renderItem={renderPremiumItem}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>!</Text>
+                <Text style={styles.emptyText}>
+                  바이낸스 데이터를 불러올 수 없습니다
+                </Text>
+                <Text style={styles.emptySubText}>
+                  아래로 당겨서 새로고침 해주세요
+                </Text>
+              </View>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={loading}
@@ -185,7 +224,7 @@ export function HomeScreen({ navigation }: Props) {
             />
           }
           style={styles.list}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={premiumCoins.length === 0 ? styles.listContentEmpty : styles.listContent}
           initialNumToRender={20}
           maxToRenderPerBatch={20}
         />
@@ -276,21 +315,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#1C1C1C',
   },
-  sortLeft: {
+  sortBtn: {
     flex: 1,
   },
-  sortCenter: {
+  sortBtnRight: {
     flex: 1,
-    alignItems: 'flex-end',
-  },
-  sortRight: {
-    width: 90,
     alignItems: 'flex-end',
   },
   sortText: {
     fontSize: 11,
     color: '#666',
     fontWeight: '500',
+  },
+  sortTextActive: {
+    color: '#3B82F6',
+    fontWeight: '700',
   },
 
   // Error Banner
@@ -304,11 +343,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    fontSize: 40,
+    color: '#333',
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    color: '#555',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+
   // List
   list: {
     flex: 1,
   },
   listContent: {
     paddingBottom: 20,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
 });
