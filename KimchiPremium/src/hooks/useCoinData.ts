@@ -43,13 +43,13 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
       const errors: string[] = [];
 
       if (ratesResult.status === 'rejected') {
-        errors.push(`환율: ${ratesResult.reason?.message || '실패'}`);
+        errors.push(`환율 API 실패`);
       }
       if (upbitResult.status === 'rejected') {
-        errors.push(`업비트: ${upbitResult.reason?.message || '실패'}`);
+        errors.push(`업비트 API 실패`);
       }
       if (binanceResult.status === 'rejected') {
-        errors.push(`바이낸스: ${binanceResult.reason?.message || '실패'}`);
+        errors.push(`해외거래소 가격 API 모두 실패 - 네트워크 확인`);
       }
 
       const rates = ratesResult.status === 'fulfilled'
