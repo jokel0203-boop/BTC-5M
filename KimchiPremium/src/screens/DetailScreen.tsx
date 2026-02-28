@@ -2,24 +2,21 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import {
   formatKRW,
-  formatUSDT,
+  formatForeignPrice,
   formatPremium,
   formatChangeRate,
   formatChangePrice,
   formatVolume,
   getPremiumColor,
   getChangeColor,
+  getExchangeLabel,
 } from '../utils/premium';
 
 export function DetailScreen({ route }: any) {
-  const { coin, exchangeRates } = route.params;
+  const { coin, exchangeRates, foreignExchange } = route.params;
 
-  const binancePriceKrw = coin.binancePrice && exchangeRates
-    ? coin.binancePrice * exchangeRates.usdKrw
-    : null;
-
-  const priceDiff = coin.upbitPrice && binancePriceKrw
-    ? coin.upbitPrice - binancePriceKrw
+  const priceDiff = coin.upbitPrice && coin.foreignPriceKrw
+    ? coin.upbitPrice - coin.foreignPriceKrw
     : null;
 
   return (
@@ -27,8 +24,8 @@ export function DetailScreen({ route }: any) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.symbol}>{coin.symbol}</Text>
-        <Text style={[styles.premium, { color: getPremiumColor(coin.binancePremium) }]}>
-          {formatPremium(coin.binancePremium)}
+        <Text style={[styles.premium, { color: getPremiumColor(coin.premium) }]}>
+          {formatPremium(coin.premium)}
         </Text>
       </View>
 
@@ -55,19 +52,19 @@ export function DetailScreen({ route }: any) {
         </View>
       </View>
 
-      {/* Binance */}
+      {/* Foreign Exchange */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>바이낸스 (Binance)</Text>
+        <Text style={styles.cardTitle}>{getExchangeLabel(foreignExchange)}</Text>
         <View style={styles.row}>
-          <Text style={styles.label}>USDT 가격</Text>
+          <Text style={styles.label}>가격</Text>
           <Text style={styles.value}>
-            {coin.binancePrice ? `${formatUSDT(coin.binancePrice)} USDT` : '-'}
+            {coin.foreignPrice ? formatForeignPrice(coin.foreignPrice, foreignExchange) : '-'}
           </Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>KRW 환산</Text>
           <Text style={styles.value}>
-            {binancePriceKrw ? `${formatKRW(binancePriceKrw)} KRW` : '-'}
+            {coin.foreignPriceKrw ? `${formatKRW(coin.foreignPriceKrw)} KRW` : '-'}
           </Text>
         </View>
       </View>
@@ -77,8 +74,8 @@ export function DetailScreen({ route }: any) {
         <Text style={styles.cardTitle}>김치프리미엄</Text>
         <View style={styles.row}>
           <Text style={styles.label}>프리미엄</Text>
-          <Text style={[styles.bigValue, { color: getPremiumColor(coin.binancePremium) }]}>
-            {formatPremium(coin.binancePremium)}
+          <Text style={[styles.bigValue, { color: getPremiumColor(coin.premium) }]}>
+            {formatPremium(coin.premium)}
           </Text>
         </View>
         {priceDiff !== null && (
@@ -99,6 +96,12 @@ export function DetailScreen({ route }: any) {
             <Text style={styles.label}>USD/KRW</Text>
             <Text style={styles.value}>{exchangeRates.usdKrw.toFixed(2)}</Text>
           </View>
+          {exchangeRates.idrKrw > 0 && (
+            <View style={styles.row}>
+              <Text style={styles.label}>IDR/KRW</Text>
+              <Text style={styles.value}>{exchangeRates.idrKrw.toFixed(4)}</Text>
+            </View>
+          )}
         </View>
       )}
     </ScrollView>

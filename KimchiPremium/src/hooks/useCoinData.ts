@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CoinPrice, ExchangeRate, SortField, SortOrder } from '../types';
-import { getUpbitAllKRW, getBinanceTickers, getExchangeRates } from '../api';
+import { CoinPrice, ExchangeRate, SortField, SortOrder, AppSettings } from '../types';
+import { getUpbitAllKRW, fetchProxyData, extractPrices } from '../api';
 import { buildCoinPrices } from '../utils/premium';
 
 interface UseCoinDataReturn {
@@ -17,7 +17,7 @@ interface UseCoinDataReturn {
   setSearchQuery: (query: string) => void;
 }
 
-export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
+export function useCoinData(settings: AppSettings, refreshInterval: number = 5): UseCoinDataReturn {
   const [coins, setCoins] = useState<CoinPrice[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,53 +28,58 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
+    const currentSettings = settingsRef.current;
+
     try {
-      const [upbitResult, binanceResult, ratesResult] = await Promise.allSettled([
-        getUpbitAllKRW(),
-        getBinanceTickers(),
-        getExchangeRates(),
-      ]);
-
-      const errors: string[] = [];
-
-      if (ratesResult.status === 'rejected') {
-        errors.push(`환율 API 실패`);
-      }
-      if (upbitResult.status === 'rejected') {
-        errors.push(`업비트 API 실패`);
-      }
-      if (binanceResult.status === 'rejected') {
-        errors.push(`해외거래소 가격 API 모두 실패 - 네트워크 확인`);
+      // 1. 업비트 데이터 (폰에서 직접 호출 - 한국이니까 OK)
+      let upbitData = new Map();
+      try {
+        upbitData = await getUpbitAllKRW();
+      } catch (e: any) {
+        setError('업비트 API 실패: ' + e.message);
+        return;
       }
 
-      const rates = ratesResult.status === 'fulfilled'
-        ? ratesResult.value
-        : { usdKrw: 1380 } as ExchangeRate;
+      // 2. 프록시를 통해 해외 데이터 가져오기
+      let foreignPrices = new Map<string, number>();
+      let rates: ExchangeRate = { usdKrw: 1380, idrKrw: 0.089 };
 
-      const upbitData = upbitResult.status === 'fulfilled'
-        ? upbitResult.value
-        : new Map();
+      if (!currentSettings.proxyUrl) {
+        setError('설정에서 프록시 서버 IP를 입력해주세요');
+        // 업비트 데이터만이라도 표시
+        const coinPrices = buildCoinPrices(upbitData, foreignPrices, rates, currentSettings.foreignExchange);
+        setCoins(coinPrices);
+        setLastUpdated(new Date());
+        setLoading(false);
+        isFetchingRef.current = false;
+        return;
+      }
 
-      const binancePrices = binanceResult.status === 'fulfilled'
-        ? binanceResult.value
-        : new Map();
+      try {
+        const proxyData = await fetchProxyData(currentSettings.proxyUrl);
+        foreignPrices = extractPrices(proxyData, currentSettings.foreignExchange);
+        if (proxyData.rates) {
+          rates = {
+            usdKrw: proxyData.rates.usdKrw || 1380,
+            idrKrw: proxyData.rates.idrKrw || 0.089,
+          };
+        }
+        setError(null);
+      } catch (e: any) {
+        setError('프록시 서버 연결 실패 - IP 확인 필요');
+      }
 
       setExchangeRates(rates);
-      const coinPrices = buildCoinPrices(upbitData, binancePrices, rates);
+      const coinPrices = buildCoinPrices(upbitData, foreignPrices, rates, currentSettings.foreignExchange);
       setCoins(coinPrices);
       setLastUpdated(new Date());
-
-      // Only set error if there are failures, never clear previous error on retry start
-      if (errors.length > 0) {
-        setError(errors.join(' | '));
-      } else {
-        setError(null);
-      }
     } catch (err: any) {
       setError(err.message || '알 수 없는 에러');
     } finally {
@@ -96,6 +101,12 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchData, refreshInterval]);
+
+  // 설정 변경 시 즉시 새로고침
+  useEffect(() => {
+    isFetchingRef.current = false;
+    fetchData();
+  }, [settings.proxyUrl, settings.foreignExchange, fetchData]);
 
   const setSortField = useCallback((field: SortField) => {
     setSortFieldState(prev => {
@@ -122,9 +133,9 @@ export function useCoinData(refreshInterval: number = 5): UseCoinDataReturn {
           return sortOrder === 'asc'
             ? a.symbol.localeCompare(b.symbol)
             : b.symbol.localeCompare(a.symbol);
-        case 'binancePremium':
-          aVal = a.binancePremium ?? -Infinity;
-          bVal = b.binancePremium ?? -Infinity;
+        case 'premium':
+          aVal = a.premium ?? -Infinity;
+          bVal = b.premium ?? -Infinity;
           break;
         case 'upbitPrice':
           aVal = a.upbitPrice ?? 0;

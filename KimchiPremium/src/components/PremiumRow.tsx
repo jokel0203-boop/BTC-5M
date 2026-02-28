@@ -1,16 +1,16 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CoinPrice, ExchangeRate } from '../types';
-import { formatKRW, formatUSDT, formatPremium, getPremiumColor } from '../utils/premium';
+import { CoinPrice, ForeignExchange } from '../types';
+import { formatKRW, formatForeignPrice, formatPremium, getPremiumColor } from '../utils/premium';
 
 interface Props {
   coin: CoinPrice;
-  exchangeRates: ExchangeRate | null;
+  foreignExchange: ForeignExchange;
   onPress: (coin: CoinPrice) => void;
 }
 
-export const PremiumRow = memo(function PremiumRow({ coin, exchangeRates, onPress }: Props) {
-  const premiumColor = getPremiumColor(coin.binancePremium);
+export const PremiumRow = memo(function PremiumRow({ coin, foreignExchange, onPress }: Props) {
+  const premiumColor = getPremiumColor(coin.premium);
 
   return (
     <TouchableOpacity
@@ -18,29 +18,25 @@ export const PremiumRow = memo(function PremiumRow({ coin, exchangeRates, onPres
       onPress={() => onPress(coin)}
       activeOpacity={0.6}
     >
-      {/* Left: Upbit */}
+      {/* Left: Symbol + Upbit */}
       <View style={styles.leftCol}>
-        <Text style={styles.exchangeLabel}>업비트 (Upbit)</Text>
-        <Text style={styles.pair}>{coin.symbol}/KRW</Text>
+        <Text style={styles.symbol}>{coin.symbol}</Text>
         <Text style={styles.price}>
-          {coin.upbitPrice ? `${formatKRW(coin.upbitPrice)} KRW` : '-'}
+          {coin.upbitPrice ? `${formatKRW(coin.upbitPrice)}` : '-'}
         </Text>
       </View>
 
-      {/* Center: Binance */}
+      {/* Center: Foreign price */}
       <View style={styles.centerCol}>
-        <Text style={styles.exchangeLabel}>바이낸스 (Binance)</Text>
-        <Text style={styles.pair}>{coin.symbol}/USDT</Text>
-        <Text style={styles.price}>
-          {coin.binancePrice ? `${formatUSDT(coin.binancePrice)} USDT` : '-'}
+        <Text style={styles.foreignPrice}>
+          {coin.foreignPrice ? formatForeignPrice(coin.foreignPrice, foreignExchange) : '-'}
         </Text>
       </View>
 
       {/* Right: Premium */}
       <View style={styles.rightCol}>
-        <Text style={styles.premiumLabel}>프리미엄</Text>
         <Text style={[styles.premiumValue, { color: premiumColor }]}>
-          {formatPremium(coin.binancePremium)}
+          {formatPremium(coin.premium)}
         </Text>
       </View>
     </TouchableOpacity>
@@ -50,13 +46,14 @@ export const PremiumRow = memo(function PremiumRow({ coin, exchangeRates, onPres
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     borderBottomWidth: 0.5,
     borderBottomColor: '#1C1C1C',
   },
   leftCol: {
-    flex: 4,
+    flex: 3,
   },
   centerCol: {
     flex: 4,
@@ -65,31 +62,25 @@ const styles = StyleSheet.create({
   rightCol: {
     flex: 3,
     alignItems: 'flex-end',
-    justifyContent: 'center',
   },
-  exchangeLabel: {
-    fontSize: 9,
-    color: '#666',
-    marginBottom: 2,
-  },
-  pair: {
-    fontSize: 12,
+  symbol: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#D0D0D0',
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   price: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#999',
     fontVariant: ['tabular-nums'],
   },
-  premiumLabel: {
-    fontSize: 9,
-    color: '#666',
-    marginBottom: 4,
+  foreignPrice: {
+    fontSize: 12,
+    color: '#888',
+    fontVariant: ['tabular-nums'],
   },
   premiumValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },

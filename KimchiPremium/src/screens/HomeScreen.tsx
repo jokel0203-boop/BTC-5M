@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { useCoinData } from '../hooks/useCoinData';
 import { useAlerts } from '../hooks/useAlerts';
+import { useSettings } from '../contexts/SettingsContext';
 import { ExchangeRow } from '../components/ExchangeRow';
 import { PremiumRow } from '../components/PremiumRow';
 import { SearchBar } from '../components/SearchBar';
 import { CoinPrice, SortField } from '../types';
+import { getExchangeLabel, getCurrencyUnit } from '../utils/premium';
 
 type TabType = 'exchange' | 'premium';
 
@@ -23,6 +25,7 @@ interface Props {
 
 export function HomeScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('exchange');
+  const { settings } = useSettings();
 
   const {
     coins,
@@ -36,7 +39,7 @@ export function HomeScreen({ navigation }: Props) {
     setSortField,
     searchQuery,
     setSearchQuery,
-  } = useCoinData(5);
+  } = useCoinData(settings, 5);
 
   const { checkAlerts } = useAlerts();
 
@@ -47,20 +50,20 @@ export function HomeScreen({ navigation }: Props) {
   }, [coins, checkAlerts]);
 
   const handleCoinPress = useCallback((coin: CoinPrice) => {
-    navigation.navigate('Detail', { coin, exchangeRates });
-  }, [navigation, exchangeRates]);
+    navigation.navigate('Detail', { coin, exchangeRates, foreignExchange: settings.foreignExchange });
+  }, [navigation, exchangeRates, settings.foreignExchange]);
 
   const renderExchangeItem = useCallback(({ item }: { item: CoinPrice }) => (
     <ExchangeRow coin={item} onPress={handleCoinPress} />
   ), [handleCoinPress]);
 
   const renderPremiumItem = useCallback(({ item }: { item: CoinPrice }) => (
-    <PremiumRow coin={item} exchangeRates={exchangeRates} onPress={handleCoinPress} />
-  ), [handleCoinPress, exchangeRates]);
+    <PremiumRow coin={item} foreignExchange={settings.foreignExchange} onPress={handleCoinPress} />
+  ), [handleCoinPress, settings.foreignExchange]);
 
-  // For premium tab, only show coins that have binance price
+  // For premium tab, only show coins that have foreign price
   const premiumCoins = useMemo(() => {
-    return coins.filter(c => c.binancePrice !== null);
+    return coins.filter(c => c.foreignPrice !== null);
   }, [coins]);
 
   const getSortArrow = (field: SortField) => {
@@ -68,22 +71,14 @@ export function HomeScreen({ navigation }: Props) {
     return sortOrder === 'desc' ? ' ▼' : ' ▲';
   };
 
+  const exchangeLabel = getExchangeLabel(settings.foreignExchange);
+  const currencyUnit = getCurrencyUnit(settings.foreignExchange);
+
   if (loading && coins.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text style={styles.loadingText}>시세 불러오는 중...</Text>
-      </View>
-    );
-  }
-
-  if (error && coins.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.retryText} onPress={refresh}>
-          탭하여 재시도
-        </Text>
       </View>
     );
   }
@@ -113,11 +108,12 @@ export function HomeScreen({ navigation }: Props) {
       {/* Exchange Rate Info Bar - shown on premium tab */}
       {activeTab === 'premium' && (
         <View style={styles.rateBar}>
-          <Text style={styles.rateText}>
-            USD/KRW : {exchangeRates ? exchangeRates.usdKrw.toFixed(2) : '-'}
-          </Text>
-          <Text style={styles.rateSep}>  </Text>
-          <Text style={styles.rateText}>USDT/USD : 1.0</Text>
+          <Text style={styles.rateExchange}>업비트 ↔ {exchangeLabel}</Text>
+          {exchangeRates && (
+            <Text style={styles.rateText}>
+              USD/KRW: {exchangeRates.usdKrw.toFixed(0)}
+            </Text>
+          )}
         </View>
       )}
 
@@ -153,27 +149,22 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </TouchableOpacity>
           <View style={styles.sortBtn}>
-            <Text style={styles.sortText}>바이낸스</Text>
+            <Text style={styles.sortText}>{currencyUnit}</Text>
           </View>
-          <TouchableOpacity style={styles.sortBtnRight} onPress={() => setSortField('binancePremium')}>
-            <Text style={[styles.sortText, sortField === 'binancePremium' && styles.sortTextActive]}>
-              프리미엄{getSortArrow('binancePremium')}
+          <TouchableOpacity style={styles.sortBtnRight} onPress={() => setSortField('premium')}>
+            <Text style={[styles.sortText, sortField === 'premium' && styles.sortTextActive]}>
+              프리미엄{getSortArrow('premium')}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Status Banner */}
+      {/* Error Banner */}
       {error ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{error}</Text>
         </View>
       ) : null}
-      {!loading && coins.length === 0 && !error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>데이터 없음 - 당겨서 새로고침</Text>
-        </View>
-      )}
 
       {/* Search */}
       <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
@@ -205,12 +196,15 @@ export function HomeScreen({ navigation }: Props) {
           ListEmptyComponent={
             !loading ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>!</Text>
                 <Text style={styles.emptyText}>
-                  바이낸스 데이터를 불러올 수 없습니다
+                  {!settings.proxyUrl
+                    ? '설정에서 프록시 서버 IP를 입력해주세요'
+                    : '해외 거래소 데이터를 불러올 수 없습니다'}
                 </Text>
                 <Text style={styles.emptySubText}>
-                  아래로 당겨서 새로고침 해주세요
+                  {!settings.proxyUrl
+                    ? '설정 탭 > 프록시 서버에서 VPS IP 입력'
+                    : '프록시 서버 연결 상태를 확인하세요'}
                 </Text>
               </View>
             ) : null
@@ -249,19 +243,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 14,
-    marginBottom: 12,
-    paddingHorizontal: 32,
-    textAlign: 'center',
-  },
-  retryText: {
-    color: '#3B82F6',
-    fontSize: 14,
-  },
 
-  // Top Tabs
+  // Tabs
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#0D0D0D',
@@ -286,27 +269,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Exchange Rate Bar
+  // Rate Bar
   rateBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: '#111',
     borderBottomWidth: 0.5,
     borderBottomColor: '#1C1C1C',
   },
+  rateExchange: {
+    fontSize: 12,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
   rateText: {
     fontSize: 11,
     color: '#999',
     fontVariant: ['tabular-nums'],
   },
-  rateSep: {
-    fontSize: 11,
-    color: '#333',
-  },
 
-  // Sort Header
+  // Sort
   sortHeader: {
     flexDirection: 'row',
     paddingHorizontal: 14,
@@ -315,44 +300,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: '#1C1C1C',
   },
-  sortBtn: {
-    flex: 1,
-  },
-  sortBtnRight: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  sortText: {
-    fontSize: 11,
-    color: '#666',
-    fontWeight: '500',
-  },
-  sortTextActive: {
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
+  sortBtn: { flex: 1 },
+  sortBtnRight: { flex: 1, alignItems: 'flex-end' },
+  sortText: { fontSize: 11, color: '#666', fontWeight: '500' },
+  sortTextActive: { color: '#3B82F6', fontWeight: '700' },
 
-  // Error Banner
+  // Error
   errorBanner: {
     backgroundColor: '#331111',
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  errorBannerText: {
-    color: '#EF4444',
-    fontSize: 12,
-  },
+  errorBannerText: { color: '#EF4444', fontSize: 12 },
 
-  // Empty State
+  // Empty
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 80,
     paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    fontSize: 40,
-    color: '#333',
-    marginBottom: 16,
   },
   emptyText: {
     color: '#888',
@@ -367,13 +332,7 @@ const styles = StyleSheet.create({
   },
 
   // List
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-  },
+  list: { flex: 1 },
+  listContent: { paddingBottom: 20 },
+  listContentEmpty: { flexGrow: 1 },
 });

@@ -78,7 +78,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
           const coin = coinMap.get(alert.symbol);
           if (!coin) return alert;
 
-          const premium = coin.binancePremium;
+          const premium = coin.premium;
           if (premium === null) return alert;
 
           const shouldTrigger =

@@ -8,6 +8,7 @@ import { DetailScreen } from '../screens/DetailScreen';
 import { AlertScreen } from '../screens/AlertScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AlertProvider } from '../hooks/useAlerts';
+import { SettingsProvider } from '../contexts/SettingsContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -40,58 +41,60 @@ function HomeStack() {
 
 export function AppNavigator() {
   return (
-    <AlertProvider>
-      <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={{
-            tabBarStyle: {
-              backgroundColor: '#0D0D0D',
-              borderTopColor: '#1A1A1A',
-              borderTopWidth: 0.5,
-            },
-            tabBarActiveTintColor: '#FFFFFF',
-            tabBarInactiveTintColor: '#555',
-            headerShown: false,
-          }}
-        >
-          <Tab.Screen
-            name="Home"
-            component={HomeStack}
-            options={{
-              tabBarLabel: '시세',
-              tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 18, color }}>$</Text>
-              ),
+    <SettingsProvider>
+      <AlertProvider>
+        <NavigationContainer>
+          <Tab.Navigator
+            screenOptions={{
+              tabBarStyle: {
+                backgroundColor: '#0D0D0D',
+                borderTopColor: '#1A1A1A',
+                borderTopWidth: 0.5,
+              },
+              tabBarActiveTintColor: '#FFFFFF',
+              tabBarInactiveTintColor: '#555',
+              headerShown: false,
             }}
-          />
-          <Tab.Screen
-            name="Alert"
-            component={AlertScreen}
-            options={{
-              tabBarLabel: '알림',
-              headerShown: true,
-              headerTitle: '김프 알람',
-              ...screenOptions,
-              tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 16, color }}>!</Text>
-              ),
-            }}
-          />
-          <Tab.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{
-              tabBarLabel: '설정',
-              headerShown: true,
-              headerTitle: '설정',
-              ...screenOptions,
-              tabBarIcon: ({ color }) => (
-                <Text style={{ fontSize: 16, color }}>*</Text>
-              ),
-            }}
-          />
-        </Tab.Navigator>
-      </NavigationContainer>
-    </AlertProvider>
+          >
+            <Tab.Screen
+              name="Home"
+              component={HomeStack}
+              options={{
+                tabBarLabel: '시세',
+                tabBarIcon: ({ color }) => (
+                  <Text style={{ fontSize: 18, color }}>$</Text>
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="알림"
+              component={AlertScreen}
+              options={{
+                tabBarLabel: '알림',
+                headerShown: true,
+                headerTitle: '김프 알람',
+                ...screenOptions,
+                tabBarIcon: ({ color }) => (
+                  <Text style={{ fontSize: 16, color }}>!</Text>
+                ),
+              }}
+            />
+            <Tab.Screen
+              name="설정"
+              component={SettingsScreen}
+              options={{
+                tabBarLabel: '설정',
+                headerShown: true,
+                headerTitle: '설정',
+                ...screenOptions,
+                tabBarIcon: ({ color }) => (
+                  <Text style={{ fontSize: 16, color }}>*</Text>
+                ),
+              }}
+            />
+          </Tab.Navigator>
+        </NavigationContainer>
+      </AlertProvider>
+    </SettingsProvider>
   );
 }

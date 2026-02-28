@@ -1,8 +1,9 @@
 export interface CoinPrice {
   symbol: string;
   upbitPrice: number | null;
-  binancePrice: number | null;
-  binancePremium: number | null;
+  foreignPrice: number | null;      // 해외 거래소 가격 (USDT 또는 IDR)
+  foreignPriceKrw: number | null;   // 해외 거래소 가격 (KRW 환산)
+  premium: number | null;           // 프리미엄 %
   changeRate: number | null;
   changePrice: number | null;
   tradeVolume24h: number | null;
@@ -10,6 +11,22 @@ export interface CoinPrice {
 
 export interface ExchangeRate {
   usdKrw: number;
+  idrKrw: number;
+}
+
+export type ForeignExchange = 'binance_spot' | 'binance_futures' | 'indodax';
+
+export interface AppSettings {
+  proxyUrl: string;
+  foreignExchange: ForeignExchange;
+}
+
+export interface ProxyData {
+  binanceSpot: Record<string, number>;
+  binanceFutures: Record<string, number>;
+  indodax: Record<string, number>;
+  rates: { usdKrw: number; idrKrw: number };
+  lastUpdate: number;
 }
 
 export interface UpbitMarketTicker {
@@ -25,7 +42,7 @@ export interface BinanceTicker {
   price: string;
 }
 
-export type SortField = 'symbol' | 'binancePremium' | 'upbitPrice' | 'changeRate' | 'tradeVolume24h';
+export type SortField = 'symbol' | 'premium' | 'upbitPrice' | 'changeRate' | 'tradeVolume24h';
 export type SortOrder = 'asc' | 'desc';
 
 export type AlertCondition = 'above' | 'below';
