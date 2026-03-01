@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CoinPrice, ExchangeRate, SortField, SortOrder, AppSettings } from '../types';
-import { getUpbitAllKRW, fetchProxyData, extractPrices, getBinanceTickers, getExchangeRates } from '../api';
+import { getUpbitAllKRW, fetchProxyData, extractPrices, getBinanceTickers, getIndodaxTickers, getExchangeRates } from '../api';
 import { buildCoinPrices } from '../utils/premium';
 
 interface UseCoinDataReturn {
@@ -70,7 +70,11 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
           // 프록시 실패 → 직접 모드로 폴백
           console.warn('[Data] 프록시 실패, 직접 모드로 전환:', e.message);
           try {
-            foreignPrices = await getBinanceTickers();
+            if (currentSettings.foreignExchange === 'indodax') {
+              foreignPrices = await getIndodaxTickers();
+            } else {
+              foreignPrices = await getBinanceTickers();
+            }
             rates = await getExchangeRates();
             setDataSource('direct');
             setError('프록시 연결 실패 - 직접 연결 모드');
@@ -82,8 +86,11 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
       } else {
         // === 직접 모드: 프록시 없이 공개 API 사용 ===
         try {
-          // CoinGecko, CoinCap, Kraken 등 한국에서 접속 가능한 API 사용
-          foreignPrices = await getBinanceTickers();
+          if (currentSettings.foreignExchange === 'indodax') {
+            foreignPrices = await getIndodaxTickers();
+          } else {
+            foreignPrices = await getBinanceTickers();
+          }
           setDataSource('direct');
           setError(null);
         } catch (e: any) {
