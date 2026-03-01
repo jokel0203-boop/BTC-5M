@@ -7,9 +7,10 @@ interface Props {
   coin: CoinPrice;
   foreignExchange: ForeignExchange;
   onPress: (coin: CoinPrice) => void;
+  onAlarmPress?: (coin: CoinPrice) => void;
 }
 
-export const PremiumRow = memo(function PremiumRow({ coin, foreignExchange, onPress }: Props) {
+export const PremiumRow = memo(function PremiumRow({ coin, foreignExchange, onPress, onAlarmPress }: Props) {
   const premiumColor = getPremiumColor(coin.premium);
 
   return (
@@ -39,6 +40,17 @@ export const PremiumRow = memo(function PremiumRow({ coin, foreignExchange, onPr
           {formatPremium(coin.premium)}
         </Text>
       </View>
+
+      {/* Alarm Button */}
+      {onAlarmPress && (
+        <TouchableOpacity
+          style={styles.alarmBtn}
+          onPress={() => onAlarmPress(coin)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.alarmIcon}>{'\u{1F514}'}</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 });
@@ -56,7 +68,7 @@ const styles = StyleSheet.create({
     flex: 3,
   },
   centerCol: {
-    flex: 4,
+    flex: 3,
     alignItems: 'center',
   },
   rightCol: {
@@ -83,5 +95,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+  },
+  alarmBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  alarmIcon: {
+    fontSize: 16,
   },
 });

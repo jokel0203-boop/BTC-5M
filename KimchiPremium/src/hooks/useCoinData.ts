@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CoinPrice, ExchangeRate, SortField, SortOrder, AppSettings } from '../types';
-import { getUpbitAllKRW, fetchProxyData, extractPrices } from '../api';
+import { getUpbitAllKRW, fetchProxyData, extractPrices, getBinanceTickers, getExchangeRates } from '../api';
 import { buildCoinPrices } from '../utils/premium';
 
 interface UseCoinDataReturn {
@@ -15,6 +15,7 @@ interface UseCoinDataReturn {
   setSortField: (field: SortField) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  dataSource: 'proxy' | 'direct' | 'none';
 }
 
 export function useCoinData(settings: AppSettings, refreshInterval: number = 5): UseCoinDataReturn {
@@ -26,6 +27,7 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
   const [sortField, setSortFieldState] = useState<SortField>('tradeVolume24h');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dataSource, setDataSource] = useState<'proxy' | 'direct' | 'none'>('none');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
   const settingsRef = useRef(settings);
@@ -47,33 +49,54 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
         return;
       }
 
-      // 2. 프록시를 통해 해외 데이터 가져오기
+      // 2. 해외 거래소 가격 + 환율
       let foreignPrices = new Map<string, number>();
       let rates: ExchangeRate = { usdKrw: 1380, idrKrw: 0.089 };
 
-      if (!currentSettings.proxyUrl) {
-        setError('설정에서 프록시 서버 IP를 입력해주세요');
-        // 업비트 데이터만이라도 표시
-        const coinPrices = buildCoinPrices(upbitData, foreignPrices, rates, currentSettings.foreignExchange);
-        setCoins(coinPrices);
-        setLastUpdated(new Date());
-        setLoading(false);
-        isFetchingRef.current = false;
-        return;
-      }
-
-      try {
-        const proxyData = await fetchProxyData(currentSettings.proxyUrl);
-        foreignPrices = extractPrices(proxyData, currentSettings.foreignExchange);
-        if (proxyData.rates) {
-          rates = {
-            usdKrw: proxyData.rates.usdKrw || 1380,
-            idrKrw: proxyData.rates.idrKrw || 0.089,
-          };
+      if (currentSettings.proxyUrl) {
+        // === 프록시 모드: VPS 경유 ===
+        try {
+          const proxyData = await fetchProxyData(currentSettings.proxyUrl);
+          foreignPrices = extractPrices(proxyData, currentSettings.foreignExchange);
+          if (proxyData.rates) {
+            rates = {
+              usdKrw: proxyData.rates.usdKrw || 1380,
+              idrKrw: proxyData.rates.idrKrw || 0.089,
+            };
+          }
+          setDataSource('proxy');
+          setError(null);
+        } catch (e: any) {
+          // 프록시 실패 → 직접 모드로 폴백
+          console.warn('[Data] 프록시 실패, 직접 모드로 전환:', e.message);
+          try {
+            foreignPrices = await getBinanceTickers();
+            rates = await getExchangeRates();
+            setDataSource('direct');
+            setError('프록시 연결 실패 - 직접 연결 모드');
+          } catch (e2: any) {
+            setError('프록시 및 직접 연결 모두 실패');
+            setDataSource('none');
+          }
         }
-        setError(null);
-      } catch (e: any) {
-        setError('프록시 서버 연결 실패 - IP 확인 필요');
+      } else {
+        // === 직접 모드: 프록시 없이 공개 API 사용 ===
+        try {
+          // CoinGecko, CoinCap, Kraken 등 한국에서 접속 가능한 API 사용
+          foreignPrices = await getBinanceTickers();
+          setDataSource('direct');
+          setError(null);
+        } catch (e: any) {
+          setError('해외 가격 API 접속 실패: ' + e.message);
+          setDataSource('none');
+        }
+
+        // 환율 직접 가져오기
+        try {
+          rates = await getExchangeRates();
+        } catch (e: any) {
+          // 기본값 사용
+        }
       }
 
       setExchangeRates(rates);
@@ -168,5 +191,6 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
     setSortField,
     searchQuery,
     setSearchQuery,
+    dataSource,
   };
 }
