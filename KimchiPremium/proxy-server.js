@@ -95,13 +95,33 @@ async function fetchIndodax() {
 }
 
 async function fetchExchangeRates() {
+  // 1차: manana.kr (한국 실시간 환율 - 가장 정확)
+  try {
+    const usdData = await fetchJSON('https://api.manana.kr/exchange/rate/KRW/USD.json', 8000);
+    if (Array.isArray(usdData) && usdData.length > 0 && usdData[0].rate) {
+      const usdKrw = usdData[0].rate;
+      let idrKrw = usdKrw / 16000;
+      try {
+        const idrData = await fetchJSON('https://api.manana.kr/exchange/rate/KRW/IDR.json', 5000);
+        if (Array.isArray(idrData) && idrData.length > 0 && idrData[0].rate) {
+          idrKrw = idrData[0].rate;
+        }
+      } catch {}
+      console.log(`[ExchangeRate] manana.kr: USD/KRW=${usdKrw}`);
+      return { usdKrw, idrKrw };
+    }
+  } catch (err) {
+    console.warn('[ExchangeRate] manana.kr 실패:', err.message);
+  }
+
+  // 2차: Open Exchange Rates (폴백)
   const data = await fetchJSON('https://open.er-api.com/v6/latest/USD', 8000);
   if (data && data.rates) {
     const usdKrw = data.rates.KRW || 1380;
     const usdIdr = data.rates.IDR || 15500;
     return {
       usdKrw,
-      idrKrw: usdKrw / usdIdr, // 1 IDR = ? KRW
+      idrKrw: usdKrw / usdIdr,
     };
   }
   throw new Error('No rates data');
