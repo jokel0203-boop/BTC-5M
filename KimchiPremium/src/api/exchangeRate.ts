@@ -13,14 +13,43 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
 }
 
 export async function getExchangeRates(): Promise<ExchangeRate> {
-  // 1차: manana.kr (한국 실시간 환율 - 가장 정확)
+  // 1차: 두나무(Upbit) 실시간 환율 API - 네이버와 동일한 실시간 시세
+  try {
+    const res = await fetchWithTimeout(
+      'https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWIDR',
+      8000,
+    );
+    const data: Array<{ code: string; basePrice: number; currencyUnit?: number }> = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      let usdKrw = 0;
+      let idrKrw = 0;
+      for (const item of data) {
+        if (item.code === 'FRX.KRWUSD' && item.basePrice) {
+          usdKrw = item.basePrice;
+        }
+        if (item.code === 'FRX.KRWIDR' && item.basePrice) {
+          // basePrice는 currencyUnit(100) IDR당 KRW → 1 IDR당으로 변환
+          const unit = item.currencyUnit || 100;
+          idrKrw = item.basePrice / unit;
+        }
+      }
+      if (usdKrw > 0) {
+        if (idrKrw === 0) idrKrw = usdKrw / 16000;
+        console.log(`[ExchangeRate] 두나무 성공: USD/KRW=${usdKrw}, IDR/KRW=${idrKrw.toFixed(4)}`);
+        return { usdKrw, idrKrw };
+      }
+    }
+  } catch (err: any) {
+    console.warn('[ExchangeRate] 두나무 실패:', err.message);
+  }
+
+  // 2차: manana.kr (매매기준율 - 하루 1회 갱신)
   try {
     const res = await fetchWithTimeout('https://api.manana.kr/exchange/rate/KRW/USD.json', 8000);
     const data: { date: string; name: string; rate: number }[] = await res.json();
     if (Array.isArray(data) && data.length > 0 && data[0].rate) {
       const usdKrw = data[0].rate;
       console.log(`[ExchangeRate] manana.kr 성공: USD/KRW = ${usdKrw}`);
-      // IDR 환율은 별도 API에서 가져오기 시도
       let idrKrw = 0.089;
       try {
         const idrRes = await fetchWithTimeout('https://api.manana.kr/exchange/rate/KRW/IDR.json', 5000);
@@ -29,7 +58,6 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
           idrKrw = idrData[0].rate;
         }
       } catch {
-        // IDR 실패 시 USD 기준으로 추정
         idrKrw = usdKrw / 16000;
       }
       return { usdKrw, idrKrw };
@@ -38,7 +66,7 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
     console.warn('[ExchangeRate] manana.kr 실패:', err.message);
   }
 
-  // 2차: Open Exchange Rates
+  // 3차: Open Exchange Rates
   try {
     const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', 8000);
     const data = await res.json();
@@ -49,7 +77,7 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
     console.warn('[ExchangeRate] open.er-api 실패:', err.message);
   }
 
-  // 3차: ExchangeRate API
+  // 4차: ExchangeRate API
   try {
     const res = await fetchWithTimeout('https://api.exchangerate-api.com/v4/latest/USD', 8000);
     const data = await res.json();
