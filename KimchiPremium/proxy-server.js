@@ -95,33 +95,8 @@ async function fetchIndodax() {
 }
 
 async function fetchExchangeRates() {
-  // 1차: 두나무(Upbit) 실시간 환율 API - 네이버와 동일한 실시간 시세
-  try {
-    const data = await fetchJSON('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWIDR', 8000);
-    if (Array.isArray(data) && data.length > 0) {
-      let usdKrw = 0;
-      let idrKrw = 0;
-      for (const item of data) {
-        if (item.code === 'FRX.KRWUSD' && item.basePrice) {
-          usdKrw = item.basePrice;
-        }
-        if (item.code === 'FRX.KRWIDR' && item.basePrice) {
-          // basePrice는 currencyUnit(100) IDR당 KRW → 1 IDR당으로 변환
-          const unit = item.currencyUnit || 100;
-          idrKrw = item.basePrice / unit;
-        }
-      }
-      if (usdKrw > 0) {
-        if (idrKrw === 0) idrKrw = usdKrw / 16000;
-        console.log(`[ExchangeRate] 두나무: USD/KRW=${usdKrw}, IDR/KRW=${idrKrw.toFixed(4)}`);
-        return { usdKrw, idrKrw };
-      }
-    }
-  } catch (err) {
-    console.warn('[ExchangeRate] 두나무 실패:', err.message);
-  }
-
-  // 2차: manana.kr (매매기준율 - 하루 1회 갱신)
+  // 1차: manana.kr (해외 VPS에서 접근 가능한 환율 API)
+  // 참고: 실시간 환율은 앱(한국 폰)에서 두나무 API로 직접 가져옴
   try {
     const usdData = await fetchJSON('https://api.manana.kr/exchange/rate/KRW/USD.json', 8000);
     if (Array.isArray(usdData) && usdData.length > 0 && usdData[0].rate) {
@@ -140,7 +115,7 @@ async function fetchExchangeRates() {
     console.warn('[ExchangeRate] manana.kr 실패:', err.message);
   }
 
-  // 3차: Open Exchange Rates (폴백)
+  // 2차: Open Exchange Rates (폴백)
   const data = await fetchJSON('https://open.er-api.com/v6/latest/USD', 8000);
   if (data && data.rates) {
     const usdKrw = data.rates.KRW || 1380;

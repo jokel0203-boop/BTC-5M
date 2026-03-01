@@ -54,16 +54,10 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
       let rates: ExchangeRate = { usdKrw: 1380, idrKrw: 0.089 };
 
       if (currentSettings.proxyUrl) {
-        // === 프록시 모드: VPS 경유 ===
+        // === 프록시 모드: VPS 경유 (코인 가격만) ===
         try {
           const proxyData = await fetchProxyData(currentSettings.proxyUrl);
           foreignPrices = extractPrices(proxyData, currentSettings.foreignExchange);
-          if (proxyData.rates) {
-            rates = {
-              usdKrw: proxyData.rates.usdKrw || 1380,
-              idrKrw: proxyData.rates.idrKrw || 0.089,
-            };
-          }
           setDataSource('proxy');
           setError(null);
         } catch (e: any) {
@@ -75,7 +69,6 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
             } else {
               foreignPrices = await getBinanceTickers();
             }
-            rates = await getExchangeRates();
             setDataSource('direct');
             setError('프록시 연결 실패 - 직접 연결 모드');
           } catch (e2: any) {
@@ -97,13 +90,13 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
           setError('해외 가격 API 접속 실패: ' + e.message);
           setDataSource('none');
         }
+      }
 
-        // 환율 직접 가져오기
-        try {
-          rates = await getExchangeRates();
-        } catch (e: any) {
-          // 기본값 사용
-        }
+      // 환율은 항상 앱에서 직접 가져오기 (한국 폰 → 두나무 실시간 API)
+      try {
+        rates = await getExchangeRates();
+      } catch (e: any) {
+        // 기본값 사용
       }
 
       setExchangeRates(rates);
