@@ -58,6 +58,10 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
         try {
           const proxyData = await fetchProxyData(currentSettings.proxyUrl);
           foreignPrices = extractPrices(proxyData, currentSettings.foreignExchange);
+          // 프록시 환율도 폴백용으로 저장
+          if (proxyData.rates?.usdKrw) {
+            rates = { usdKrw: proxyData.rates.usdKrw, idrKrw: proxyData.rates.idrKrw || 0.089 };
+          }
           setDataSource('proxy');
           setError(null);
         } catch (e: any) {
@@ -92,11 +96,12 @@ export function useCoinData(settings: AppSettings, refreshInterval: number = 5):
         }
       }
 
-      // 환율은 항상 앱에서 직접 가져오기 (한국 폰 → 두나무 실시간 API)
+      // 환율은 앱에서 직접 가져오기 (한국 폰 → 두나무 실시간 API)
+      // 실패 시 프록시에서 가져온 환율 사용
       try {
         rates = await getExchangeRates();
       } catch (e: any) {
-        // 기본값 사용
+        // 프록시 환율이 이미 설정되어 있으면 그대로 사용, 아니면 기본값
       }
 
       setExchangeRates(rates);

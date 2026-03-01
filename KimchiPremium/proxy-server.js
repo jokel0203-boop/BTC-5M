@@ -177,7 +177,13 @@ async function refreshAll() {
     cache.binanceFutures = results[1].value;
     console.log(`[OK] 바이낸스 선물: ${Object.keys(results[1].value).length}개`);
   } else {
-    console.log(`[FAIL] 바이낸스 선물: ${results[1].reason?.message}`);
+    // 선물 API 실패(451 등) → 현물 가격으로 대체 (선물/현물 가격은 거의 동일)
+    if (Object.keys(cache.binanceSpot).length > 0) {
+      cache.binanceFutures = { ...cache.binanceSpot };
+      console.log(`[FALLBACK] 바이낸스 선물: 현물 가격으로 대체 (${Object.keys(cache.binanceSpot).length}개) - ${results[1].reason?.message}`);
+    } else {
+      console.log(`[FAIL] 바이낸스 선물: ${results[1].reason?.message}`);
+    }
   }
 
   if (results[2].status === 'fulfilled') {

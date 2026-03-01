@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppSettings, ForeignExchange } from '../types';
 
@@ -61,6 +62,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, [persist]);
+
+  // 설정 로드 완료 전에는 자식 컴포넌트를 렌더링하지 않음
+  // → 기본값(빈 proxyUrl)으로 잘못된 첫 번째 데이터 패치 방지
+  if (!loaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D0D0D' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
 
   return (
     <SettingsContext.Provider value={{ settings, setProxyUrl, setForeignExchange, loaded }}>
