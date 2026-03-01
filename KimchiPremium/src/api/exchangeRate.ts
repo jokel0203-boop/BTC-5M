@@ -12,16 +12,58 @@ async function fetchWithTimeout(url: string, timeoutMs: number, headers?: Record
   }
 }
 
+// 네이버 환율 API에서 환율 파싱
+function parseNaverRate(data: any): number | null {
+  const result = data?.result;
+  if (!result) return null;
+  // calcPrice, closePrice 등 여러 필드 시도
+  const price = result.calcPrice || result.closePrice || result.basePrice;
+  if (!price) return null;
+  const num = typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price;
+  return num > 0 ? num : null;
+}
+
 export async function getExchangeRates(): Promise<ExchangeRate> {
-  // 1차: 두나무(Upbit) 실시간 환율 API - 여러 URL 시도
+  // 1차: 네이버 증권 환율 API (실시간, 한국/해외 모두 접근 가능)
+  try {
+    const usdRes = await fetchWithTimeout(
+      'https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=FX_USDKRW',
+      5000,
+    );
+    const usdData = await usdRes.json();
+    const usdKrw = parseNaverRate(usdData);
+    if (usdKrw) {
+      let idrKrw = usdKrw / 16000;
+      // IDR 환율도 시도
+      try {
+        const idrRes = await fetchWithTimeout(
+          'https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=FX_IDRKRW',
+          3000,
+        );
+        const idrData = await idrRes.json();
+        const idrRate = parseNaverRate(idrData);
+        if (idrRate) {
+          // 네이버 IDR은 100 IDR당 KRW로 표시될 수 있음
+          idrKrw = idrRate > 1 ? idrRate / 100 : idrRate;
+        }
+      } catch {
+        // IDR 실패 시 USD 기준 추정
+      }
+      console.log(`[ExchangeRate] 네이버 성공: USD/KRW=${usdKrw}, IDR/KRW=${idrKrw.toFixed(4)}`);
+      return { usdKrw, idrKrw };
+    }
+  } catch (err: any) {
+    console.warn('[ExchangeRate] 네이버 실패:', err.message);
+  }
+
+  // 2차: 두나무(Upbit) 실시간 환율 API
   const dunamuUrls = [
     'https://quotation-api.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWIDR',
     'https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD,FRX.KRWIDR',
   ];
-  const browserHeaders = { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' };
   for (const url of dunamuUrls) {
     try {
-      const res = await fetchWithTimeout(url, 5000, browserHeaders);
+      const res = await fetchWithTimeout(url, 5000);
       const data: Array<{ code: string; basePrice: number; currencyUnit?: number }> = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         let usdKrw = 0;
@@ -46,7 +88,7 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
     }
   }
 
-  // 2차: manana.kr (매매기준율 - 하루 1회 갱신)
+  // 3차: manana.kr (매매기준율 - 하루 1회 갱신)
   try {
     const res = await fetchWithTimeout('https://api.manana.kr/exchange/rate/KRW/USD.json', 8000);
     const data: { date: string; name: string; rate: number }[] = await res.json();
@@ -69,7 +111,7 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
     console.warn('[ExchangeRate] manana.kr 실패:', err.message);
   }
 
-  // 3차: Open Exchange Rates
+  // 4차: Open Exchange Rates
   try {
     const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', 8000);
     const data = await res.json();
@@ -78,17 +120,6 @@ export async function getExchangeRates(): Promise<ExchangeRate> {
     }
   } catch (err: any) {
     console.warn('[ExchangeRate] open.er-api 실패:', err.message);
-  }
-
-  // 4차: ExchangeRate API
-  try {
-    const res = await fetchWithTimeout('https://api.exchangerate-api.com/v4/latest/USD', 8000);
-    const data = await res.json();
-    if (data.rates?.KRW) {
-      return { usdKrw: data.rates.KRW, idrKrw: data.rates.IDR ? data.rates.KRW / data.rates.IDR : 0.089 };
-    }
-  } catch (err: any) {
-    console.warn('[ExchangeRate] exchangerate-api 실패:', err.message);
   }
 
   // 모두 실패 시 기본값

@@ -94,9 +94,37 @@ async function fetchIndodax() {
   return prices;
 }
 
+function parseNaverRate(data) {
+  const result = data && data.result;
+  if (!result) return null;
+  const price = result.calcPrice || result.closePrice || result.basePrice;
+  if (!price) return null;
+  const num = typeof price === 'string' ? parseFloat(price.replace(/,/g, '')) : price;
+  return num > 0 ? num : null;
+}
+
 async function fetchExchangeRates() {
-  // 1차: manana.kr (해외 VPS에서 접근 가능한 환율 API)
-  // 참고: 실시간 환율은 앱(한국 폰)에서 두나무 API로 직접 가져옴
+  // 1차: 네이버 증권 환율 API (실시간)
+  try {
+    const usdData = await fetchJSON('https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=FX_USDKRW', 5000);
+    const usdKrw = parseNaverRate(usdData);
+    if (usdKrw) {
+      let idrKrw = usdKrw / 16000;
+      try {
+        const idrData = await fetchJSON('https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=FX_IDRKRW', 3000);
+        const idrRate = parseNaverRate(idrData);
+        if (idrRate) {
+          idrKrw = idrRate > 1 ? idrRate / 100 : idrRate;
+        }
+      } catch {}
+      console.log(`[ExchangeRate] 네이버: USD/KRW=${usdKrw}, IDR/KRW=${idrKrw.toFixed(4)}`);
+      return { usdKrw, idrKrw };
+    }
+  } catch (err) {
+    console.warn('[ExchangeRate] 네이버 실패:', err.message);
+  }
+
+  // 2차: manana.kr (매매기준율)
   try {
     const usdData = await fetchJSON('https://api.manana.kr/exchange/rate/KRW/USD.json', 8000);
     if (Array.isArray(usdData) && usdData.length > 0 && usdData[0].rate) {
@@ -115,7 +143,7 @@ async function fetchExchangeRates() {
     console.warn('[ExchangeRate] manana.kr 실패:', err.message);
   }
 
-  // 2차: Open Exchange Rates (폴백)
+  // 3차: Open Exchange Rates (폴백)
   const data = await fetchJSON('https://open.er-api.com/v6/latest/USD', 8000);
   if (data && data.rates) {
     const usdKrw = data.rates.KRW || 1380;
