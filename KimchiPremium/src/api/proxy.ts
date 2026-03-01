@@ -33,10 +33,6 @@ export function extractPrices(
       break;
     case 'binance_futures':
       source = data.binanceFutures || {};
-      // 선물 데이터가 비어있으면 현물 가격으로 대체 (선물/현물 가격은 거의 동일)
-      if (Object.keys(source).length === 0) {
-        source = data.binanceSpot || {};
-      }
       break;
     case 'indodax':
       source = data.indodax || {};

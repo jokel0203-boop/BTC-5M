@@ -59,25 +59,63 @@ function fetchJSON(url, timeoutMs = 10000) {
 // --- 데이터 가져오기 ---
 
 async function fetchBinanceSpot() {
-  const data = await fetchJSON('https://api.binance.com/api/v3/ticker/price');
-  const prices = {};
-  for (const t of data) {
-    if (t.symbol.endsWith('USDT')) {
-      prices[t.symbol.replace('USDT', '')] = parseFloat(t.price);
+  // 여러 바이낸스 현물 API 도메인 순서대로 시도
+  const urls = [
+    'https://api.binance.com/api/v3/ticker/price',
+    'https://api1.binance.com/api/v3/ticker/price',
+    'https://api2.binance.com/api/v3/ticker/price',
+    'https://api3.binance.com/api/v3/ticker/price',
+    'https://api4.binance.com/api/v3/ticker/price',
+  ];
+
+  for (const url of urls) {
+    try {
+      const data = await fetchJSON(url, 8000);
+      const prices = {};
+      for (const t of data) {
+        if (t.symbol.endsWith('USDT')) {
+          prices[t.symbol.replace('USDT', '')] = parseFloat(t.price);
+        }
+      }
+      if (Object.keys(prices).length > 0) {
+        return prices;
+      }
+    } catch (err) {
+      console.warn(`[Spot] ${url} 실패: ${err.message}`);
     }
   }
-  return prices;
+
+  throw new Error('모든 바이낸스 현물 API 접속 실패');
 }
 
 async function fetchBinanceFutures() {
-  const data = await fetchJSON('https://fapi.binance.com/fapi/v1/ticker/price');
-  const prices = {};
-  for (const t of data) {
-    if (t.symbol.endsWith('USDT')) {
-      prices[t.symbol.replace('USDT', '')] = parseFloat(t.price);
+  // 여러 바이낸스 선물 API 도메인 순서대로 시도
+  const urls = [
+    'https://fapi.binance.com/fapi/v1/ticker/price',
+    'https://fapi1.binance.com/fapi/v1/ticker/price',
+    'https://fapi2.binance.com/fapi/v1/ticker/price',
+    'https://fapi3.binance.com/fapi/v1/ticker/price',
+    'https://fapi4.binance.com/fapi/v1/ticker/price',
+  ];
+
+  for (const url of urls) {
+    try {
+      const data = await fetchJSON(url, 8000);
+      const prices = {};
+      for (const t of data) {
+        if (t.symbol.endsWith('USDT')) {
+          prices[t.symbol.replace('USDT', '')] = parseFloat(t.price);
+        }
+      }
+      if (Object.keys(prices).length > 0) {
+        return prices;
+      }
+    } catch (err) {
+      console.warn(`[Futures] ${url} 실패: ${err.message}`);
     }
   }
-  return prices;
+
+  throw new Error('모든 바이낸스 선물 API 접속 실패');
 }
 
 async function fetchIndodax() {
@@ -177,13 +215,7 @@ async function refreshAll() {
     cache.binanceFutures = results[1].value;
     console.log(`[OK] 바이낸스 선물: ${Object.keys(results[1].value).length}개`);
   } else {
-    // 선물 API 실패(451 등) → 현물 가격으로 대체 (선물/현물 가격은 거의 동일)
-    if (Object.keys(cache.binanceSpot).length > 0) {
-      cache.binanceFutures = { ...cache.binanceSpot };
-      console.log(`[FALLBACK] 바이낸스 선물: 현물 가격으로 대체 (${Object.keys(cache.binanceSpot).length}개) - ${results[1].reason?.message}`);
-    } else {
-      console.log(`[FAIL] 바이낸스 선물: ${results[1].reason?.message}`);
-    }
+    console.log(`[FAIL] 바이낸스 선물: ${results[1].reason?.message}`);
   }
 
   if (results[2].status === 'fulfilled') {
