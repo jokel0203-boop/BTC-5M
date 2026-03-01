@@ -173,7 +173,7 @@ export function SettingsScreen({ navigation }: Props) {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>새로고침</Text>
-          <Text style={styles.value}>5초</Text>
+          <Text style={styles.value}>1초</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>버전</Text>

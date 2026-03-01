@@ -49,7 +49,7 @@ export function HomeScreen({ navigation }: Props) {
     searchQuery,
     setSearchQuery,
     dataSource,
-  } = useCoinData(settings, 5);
+  } = useCoinData(settings, 1);
 
   const { checkAlerts, addAlert } = useAlerts();
 

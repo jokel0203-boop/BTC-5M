@@ -1,10 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppSettings, ForeignExchange } from '../types';
+
+const STORAGE_KEY = 'kimchi_settings';
 
 interface SettingsContextType {
   settings: AppSettings;
   setProxyUrl: (url: string) => void;
   setForeignExchange: (exchange: ForeignExchange) => void;
+  loaded: boolean;
 }
 
 const defaultSettings: AppSettings = {
@@ -22,17 +26,44 @@ export function useSettings() {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [loaded, setLoaded] = useState(false);
+
+  // 앱 시작 시 저장된 설정 불러오기
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw);
+          setSettings(prev => ({ ...prev, ...saved }));
+        } catch {}
+      }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  // 설정 변경 시 AsyncStorage에 저장
+  const persist = useCallback((newSettings: AppSettings) => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings)).catch(() => {});
+  }, []);
 
   const setProxyUrl = useCallback((url: string) => {
-    setSettings(prev => ({ ...prev, proxyUrl: url.trim() }));
-  }, []);
+    setSettings(prev => {
+      const next = { ...prev, proxyUrl: url.trim() };
+      persist(next);
+      return next;
+    });
+  }, [persist]);
 
   const setForeignExchange = useCallback((exchange: ForeignExchange) => {
-    setSettings(prev => ({ ...prev, foreignExchange: exchange }));
-  }, []);
+    setSettings(prev => {
+      const next = { ...prev, foreignExchange: exchange };
+      persist(next);
+      return next;
+    });
+  }, [persist]);
 
   return (
-    <SettingsContext.Provider value={{ settings, setProxyUrl, setForeignExchange }}>
+    <SettingsContext.Provider value={{ settings, setProxyUrl, setForeignExchange, loaded }}>
       {children}
     </SettingsContext.Provider>
   );
