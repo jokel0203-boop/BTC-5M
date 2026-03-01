@@ -182,7 +182,9 @@ export function HomeScreen({ navigation }: Props) {
               )}
               {exchangeRates && (
                 <Text style={styles.rateText}>
-                  USD/KRW: {exchangeRates.usdKrw.toFixed(0)}
+                  {settings.foreignExchange === 'indodax'
+                    ? `IDR/KRW: ${exchangeRates.idrKrw.toFixed(4)}`
+                    : `USD/KRW: ${exchangeRates.usdKrw.toFixed(2)}`}
                 </Text>
               )}
             </View>
